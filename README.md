@@ -4,8 +4,6 @@ A simple Video I/O library written in Go. This library relies on [FFMPEG](https:
 
 One of the key features of this library is it's simplicity: The FFMPEG commands used to read and write video are readily available in `video.go` and `videowriter.go` for you to modify as you need.
 
-For portability, all the library code can be found in the `videoio.go` file.
-
 ## Documentation
 
 Video-IO features `Video` and `VideoWriter` structs which can read and write videos.

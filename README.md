@@ -1,6 +1,6 @@
-# ImageIO
+# Video-IO
 
-A simple Image and Video I/O library written in Go. This library relies on [FFMPEG](https://www.ffmpeg.org/), which must be downloaded before usage.
+A simple Video I/O library written in Go. This library relies on [FFMPEG](https://www.ffmpeg.org/), which must be downloaded before usage.
 
 One of the key features of this library is it's simplicity: The FFMPEG commands used to read and write video are readily available in `video.go` and `videowriter.go` for you to modify as you need.
 
@@ -8,7 +8,7 @@ For portability, all the library code can be found in the `videoio.go` file.
 
 ## Documentation
 
-ImageIO features `Video` and `VideoWriter` structs which can read and write videos.
+Video-IO features `Video` and `VideoWriter` structs which can read and write videos.
 
 ## `Video`
 
@@ -40,8 +40,8 @@ The `VideoWriter` is used to write frames to a video file. You first need to cre
 ```go
 video := Video{
     // width and height are required, defaults available for all other parameters.
-    width:  1920
-    height: 1080
+    width:  1920,
+    height: 1080,
     ... // Initialize other desired properties of the video you want to create.
 }
 writer := NewVideoWriter("output.mp4", video)
@@ -57,12 +57,12 @@ Alternatively, you could manually create a `VideoWriter` struct and fill it in y
 
 ```go
 writer := VideoWriter{
-    filename:   "output.mp4"
-    width:      1920
+    filename:   "output.mp4",
+    width:      1920,
     height:     1080
     ...
 }
-defer writer.Close() // Make sure to close writer.
+defer writer.Close()
 
 w, h, c := 1920, 1080, 3
 frame = make([]byte, w*h*c) // Create Frame as RGB Image and modify.

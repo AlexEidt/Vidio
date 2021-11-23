@@ -10,8 +10,6 @@ func main() {
 	output := "output.mp4"
 	video := NewVideo(filename)
 
-	fmt.Println(video.bitrate)
-
 	writer := NewVideoWriter(output, video)
 	defer writer.Close()
 

@@ -32,12 +32,6 @@ func NewVideoWriter(filename string, video *Video) *VideoWriter {
 	if video.fps == 0 {
 		video.fps = 25 // Default to 25 FPS.
 	}
-	if video.codec == "" {
-		video.codec = "mpeg4" // Default to MPEG4.
-	}
-	if video.pix_fmt == "" {
-		video.pix_fmt = "rgb24" // Default to RGB24.
-	}
 	return &VideoWriter{
 		filename: filename,
 		width:    video.width,
@@ -45,8 +39,8 @@ func NewVideoWriter(filename string, video *Video) *VideoWriter {
 		channels: video.channels,
 		bitrate:  video.bitrate,
 		fps:      video.fps,
-		codec:    video.codec,
-		pix_fmt:  video.pix_fmt,
+		codec:    "mpeg4",
+		pix_fmt:  "rgb24",
 	}
 }
 
@@ -61,6 +55,7 @@ func (writer *VideoWriter) initVideoWriter() {
 		"-vcodec", "rawvideo",
 		"-s", fmt.Sprintf("%dx%d", writer.width, writer.height), // frame w x h
 		"-pix_fmt", writer.pix_fmt,
+		//"-b:v", fmt.Sprintf("%d", writer.bitrate), // bitrate
 		"-r", fmt.Sprintf("%f", writer.fps), // frames per second
 		"-i", "-", // The imput comes from stdin
 		"-an", // Tells FFMPEG not to expect any audio

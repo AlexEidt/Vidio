@@ -29,7 +29,7 @@ func NewVideo(filename string) *Video {
 	}
 	// Execute ffmpeg -i command to get video information.
 	cmd := exec.Command("ffmpeg", "-i", filename, "-")
-	// FFMPEG output piped to Stderr.
+	// ffmpeg output piped to Stderr.
 	pipe, err := cmd.StderrPipe()
 	if err != nil {
 		panic(err)
@@ -47,7 +47,7 @@ func NewVideo(filename string) *Video {
 		}
 	}
 	cmd.Wait()
-	video := &Video{filename: filename, channels: 3, pipe: nil, framebuffer: nil}
+	video := &Video{filename: filename, channels: 3}
 	parseFFMPEGHeader(video, string(buffer))
 	return video
 }

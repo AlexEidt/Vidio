@@ -13,7 +13,6 @@ type VideoWriter struct {
 	filename string
 	width    int
 	height   int
-	channels int
 	bitrate  int
 	fps      float64
 	codec    string
@@ -26,9 +25,6 @@ func NewVideoWriter(filename string, video *Video) *VideoWriter {
 	if video.width == 0 || video.height == 0 {
 		panic("Video width and height must be set.")
 	}
-	if video.channels == 0 {
-		video.channels = 3 // Default to RGB frames.
-	}
 	if video.fps == 0 {
 		video.fps = 25 // Default to 25 FPS.
 	}
@@ -36,7 +32,6 @@ func NewVideoWriter(filename string, video *Video) *VideoWriter {
 		filename: filename,
 		width:    video.width,
 		height:   video.height,
-		channels: video.channels,
 		bitrate:  video.bitrate,
 		fps:      video.fps,
 		codec:    "mpeg4",
@@ -55,11 +50,11 @@ func (writer *VideoWriter) initVideoWriter() {
 		"-vcodec", "rawvideo",
 		"-s", fmt.Sprintf("%dx%d", writer.width, writer.height), // frame w x h
 		"-pix_fmt", writer.pix_fmt,
-		//"-b:v", fmt.Sprintf("%d", writer.bitrate), // bitrate
 		"-r", fmt.Sprintf("%f", writer.fps), // frames per second
 		"-i", "-", // The imput comes from stdin
-		"-an", // Tells FFMPEG not to expect any audio
+		"-an", // Tells ffmpeg not to expect any audio
 		"-vcodec", writer.codec,
+		"-b:v", fmt.Sprintf("%dk", writer.bitrate), // bitrate
 		writer.filename,
 	)
 	writer.cmd = cmd
@@ -83,7 +78,7 @@ func (writer *VideoWriter) Write(frame []byte) {
 	for total < len(frame) {
 		n, err := (*writer.pipe).Write(frame[total:])
 		if err != nil {
-			fmt.Println("Likely cause is invalid parameters to FFMPEG.")
+			defer fmt.Println("Likely cause is invalid parameters to ffmpeg.")
 			panic(err)
 		}
 		total += n

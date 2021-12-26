@@ -1,12 +1,6 @@
 # Video-IO
 
-A simple Video I/O library written in Go. This library relies on [FFMPEG](https://www.ffmpeg.org/), which must be downloaded before usage.
-
-One of the key features of this library is it's simplicity: The FFMPEG commands used to read and write video are readily available in `videoio.go` for you to modify as you need. All functions placed in one file for portability.
-
-## Documentation
-
-Video-IO features `Video` and `VideoWriter` structs which can read and write videos.
+A simple Video I/O library written in Go. This library relies on [FFmpeg](https://www.ffmpeg.org/), which must be downloaded before usage.
 
 ## `Video`
 
@@ -19,15 +13,23 @@ for video.NextFrame() {
 }
 ```
 
-Notice that once the `video` is initialized, you will have access to certain metadata of the video such as the 
-
-* width (pixels)
-* height (pixels)
-* bitrate (kB/s)
-* duration (seconds)
-* frames per second
-* video codec
-* pixel format
+```
+type Video struct {
+	filename    string
+	width       int
+	height      int
+	channels    int
+	bitrate     int
+	frames      int
+	duration    float64
+	fps         float64
+	codec       string
+	pix_fmt     string
+	framebuffer []byte
+	pipe        *io.ReadCloser
+	cmd         *exec.Cmd
+}
+```
 
 Once the frame is read by calling the `NextFrame()` function, the resulting frame is stored in the `framebuffer` as shown above. The frame buffer is an array of bytes representing the most recently read frame as an RGB image. The framebuffer is flattened and contains image data in the form: `RGBRGBRGBRGB...`.
 
@@ -85,4 +87,5 @@ for video.NextFrame() {
 
 # Acknowledgements
 
-* Special thanks to [Zulko](http://zulko.github.io/) and his [blog post](http://zulko.github.io/blog/2013/09/27/read-and-write-video-frames-in-python-using-ffmpeg/) about using FFMPEG to process video.
+* Special thanks to [Zulko](http://zulko.github.io/) and his [blog post](http://zulko.github.io/blog/2013/09/27/read-and-write-video-frames-in-python-using-ffmpeg/) about using FFmpeg to process video.
+* The [ImageIO-FFMPEG](https://github.com/imageio/imageio-ffmpeg/) project on GitHub.

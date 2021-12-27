@@ -17,6 +17,7 @@ video := vidio.NewVideo("input.mp4")
 for video.Read() {
 	// "frame" stores the video frame as a flattened RGB image
 	frame := video.framebuffer // stored as: RGBRGBRGBRGB...
+	// Video processing here...
 }
 ```
 
@@ -64,12 +65,13 @@ defer camera.Close()
 for camera.Read() {
 	// "frame" stores the video frame as a flattened RGB image
 	frame := camera.framebuffer // stored as: RGBRGBRGBRGB...
+	// Video processing here...
 }
 ```
 
 ## `VideoWriter`
 
-The `VideoWriter` is used to write frames to a video file. The only required parameters are the output file name, the width and height of the frames being written, and an `Options` struct. This contains all the desired properties of the new video you want to create such as width, height and framerate.
+The `VideoWriter` is used to write frames to a video file. The only required parameters are the output file name, the width and height of the frames being written, and an `Options` struct. This contains all the desired properties of the new video you want to create.
 
 ```go
 type Options struct {
@@ -174,7 +176,7 @@ for webcam.Read() {
 }
 ```
 
-Create a gif from a series of `png` files enumerated from 1 to 10 that loops continously with a final frame delay of 1000 centiseconds.
+Create a gif from a series of `png` files enumerated from 1 to 10 that loops continuously with a final frame delay of 1000 centiseconds.
 
 ```go
 w, h, _ := vidio.Read("1.png") // Get frame dimensions from first image

@@ -16,25 +16,25 @@ The `Video` struct stores data about a video file you give it. The code below sh
 video := vidio.NewVideo("input.mp4")
 for video.Read() {
 	// "frame" stores the video frame as a flattened RGB image
-    frame := video.framebuffer // stored as: RGBRGBRGBRGB...
+	frame := video.framebuffer // stored as: RGBRGBRGBRGB...
 }
 ```
 
 ```go
 type Video struct {
-	filename    string			// Video Filename
-	width       int				// Width of Frames
-	height      int				// Height of Frames
-	depth       int				// Depth of Frames
-	bitrate     int				// Bitrate for video encoding
-	frames      int				// Total number of frames
-	duration    float64			// Duration in seconds
-	fps         float64			// Frames per second
-	codec       string			// Codec used to encode video
-	pix_fmt     string			// Pixel format video is stored in
-	framebuffer []byte			// Raw frame data
-	pipe        *io.ReadCloser	// Stdout pipe for ffmpeg process
-	cmd         *exec.Cmd		// ffmpeg command
+	filename    string          // Video Filename
+	width       int             // Width of Frames
+	height      int             // Height of Frames
+	depth       int             // Depth of Frames
+	bitrate     int             // Bitrate for video encoding
+	frames      int             // Total number of frames
+	duration    float64         // Duration in seconds
+	fps         float64         // Frames per second
+	codec       string          // Codec used to encode video
+	pix_fmt     string          // Pixel format video is stored in
+	framebuffer []byte          // Raw frame data
+	pipe        *io.ReadCloser  // Stdout pipe for ffmpeg process
+	cmd         *exec.Cmd       // ffmpeg command
 }
 ```
 
@@ -44,15 +44,15 @@ The `Camera` can read from any cameras on the device running Vidio. It takes in 
 
 ```go
 type Camera struct {
-	name        string			// Camera device name
-	width       int				// Camera frame width
-	height      int				// Camera frame height
-	depth       int				// Camera frame depth
-	fps         float64			// Camera frames per second
-	codec       string			// Camera codec
-	framebuffer []byte			// Raw frame data
-	pipe        *io.ReadCloser	// Stdout pipe for ffmpeg process streaming webcam
-	cmd         *exec.Cmd		// ffmpeg command
+	name        string          // Camera device name
+	width       int             // Camera frame width
+	height      int             // Camera frame height
+	depth       int             // Camera frame depth
+	fps         float64         // Camera frames per second
+	codec       string          // Camera codec
+	framebuffer []byte          // Raw frame data
+	pipe        *io.ReadCloser  // Stdout pipe for ffmpeg process streaming webcam
+	cmd         *exec.Cmd       // ffmpeg command
 }
 ```
 
@@ -73,30 +73,30 @@ The `VideoWriter` is used to write frames to a video file. The only required par
 
 ```go
 type Options struct {
-	bitrate     int				// Bitrate
-	loop        int				// For GIFs only. -1=no loop, 0=loop forever, >0=loop n times
-	delay       int				// Delay for Final Frame of GIFs. Default -1 (Use same delay as previous frame)
-	macro       int				// macro size for determining how to resize frames for codecs. Default 16
-	fps         float64			// Frames per second. Default 25
-	quality 	float64			// If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst
-	codec       string			// Codec for video. Default libx264
+	bitrate     int             // Bitrate
+	loop        int             // For GIFs only. -1=no loop, 0=loop forever, >0=loop n times
+	delay       int             // Delay for Final Frame of GIFs. Default -1 (Use same delay as previous frame)
+	macro       int             // macro size for determining how to resize frames for codecs. Default 16
+	fps			float64         // Frames per second. Default 25
+	quality     float64         // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst
+	codec		string          // Codec for video. Default libx264
 }
 ```
 
 ```go
 type VideoWriter struct {
-	filename    string			// Output video filename
-	width       int				// Frame width
-	height      int				// Frame height
-	bitrate     int				// Output video bitrate for encoding
-	loop        int				// Number of times for GIF to loop
-	delay       int				// Delay of final frame of GIF
-	macro       int				// macro size for determining how to resize frames for codecs
-	fps         float64			// Frames per second for output video
-	quality		float64			// Used if bitrate not given
-	codec       string			// Codec to encode video with
-	pipe        *io.WriteCloser	// Stdout pipe of ffmpeg process
-	cmd         *exec.Cmd		// ffmpeg command
+	filename	string          // Output video filename
+	width		int             // Frame width
+	height		int             // Frame height
+	bitrate		int             // Output video bitrate for encoding
+	loop		int             // Number of times for GIF to loop
+	delay		int             // Delay of final frame of GIF
+	macro		int             // macro size for determining how to resize frames for codecs
+	fps			float64         // Frames per second for output video
+	quality     float64         // Used if bitrate not given
+	codec		string          // Codec to encode video with
+	pipe		*io.WriteCloser // Stdout pipe of ffmpeg process
+	cmd			*exec.Cmd       // ffmpeg command
 }
 ```
 

@@ -1,4 +1,4 @@
-package main
+package vidio
 
 import (
 	"fmt"
@@ -11,43 +11,35 @@ import (
 )
 
 type VideoWriter struct {
-	filename    string
-	width       int
-	height      int
-	bitrate     int
-	loop        int // For GIFs. -1=no loop, 0=loop forever, >0=loop n times
-	delay       int // Delay for Final Frame of GIFs.
-	macro       int
-	fps         float64
-	codec       string
-	in_pix_fmt  string
-	out_pix_fmt string
-	pipe        *io.WriteCloser
-	cmd         *exec.Cmd
+	filename string
+	width    int
+	height   int
+	bitrate  int
+	loop     int // For GIFs. -1=no loop, 0=loop forever, >0=loop n times
+	delay    int // Delay for Final Frame of GIFs.
+	macro    int
+	fps      float64
+	quality  float64
+	codec    string
+	pipe     *io.WriteCloser
+	cmd      *exec.Cmd
 }
 
 type Options struct {
-	width       int
-	height      int
-	bitrate     int
-	loop        int
-	delay       int
-	macro       int
-	fps         float64
-	codec       string
-	in_pix_fmt  string
-	out_pix_fmt string
+	bitrate int
+	loop    int
+	delay   int
+	macro   int
+	fps     float64
+	quality float64
+	codec   string
 }
 
-func NewVideoWriter(filename string, options *Options) *VideoWriter {
+func NewVideoWriter(filename string, width, height int, options *Options) *VideoWriter {
 	writer := VideoWriter{filename: filename}
 
-	if options.width == 0 || options.height == 0 {
-		panic("width and height must be greater than 0.")
-	} else {
-		writer.width = options.width
-		writer.height = options.height
-	}
+	writer.width = width
+	writer.height = height
 
 	// Default Parameter options logic from:
 	// https://github.com/imageio/imageio-ffmpeg/blob/master/imageio_ffmpeg/_io.py#L268
@@ -72,6 +64,12 @@ func NewVideoWriter(filename string, options *Options) *VideoWriter {
 		writer.fps = options.fps
 	}
 
+	if options.quality == 0 {
+		writer.quality = 0.5
+	} else {
+		writer.quality = options.quality
+	}
+
 	if options.codec == "" {
 		if strings.HasSuffix(strings.ToLower(filename), ".wmv") {
 			writer.codec = "msmpeg4"
@@ -82,18 +80,6 @@ func NewVideoWriter(filename string, options *Options) *VideoWriter {
 		}
 	} else {
 		writer.codec = options.codec
-	}
-
-	if options.in_pix_fmt == "" {
-		writer.in_pix_fmt = "rgb24"
-	} else {
-		writer.in_pix_fmt = options.in_pix_fmt
-	}
-
-	if options.out_pix_fmt == "" {
-		writer.out_pix_fmt = "yuv420p"
-	} else {
-		writer.out_pix_fmt = options.out_pix_fmt
 	}
 
 	return &writer
@@ -109,13 +95,27 @@ func initVideoWriter(writer *VideoWriter) {
 		"-f", "rawvideo",
 		"-vcodec", "rawvideo",
 		"-s", fmt.Sprintf("%dx%d", writer.width, writer.height), // frame w x h
-		"-pix_fmt", writer.in_pix_fmt,
+		"-pix_fmt", "rgb24",
 		"-r", fmt.Sprintf("%.02f", writer.fps), // frames per second
 		"-i", "-", // The input comes from stdin
 		"-an", // Tells ffmpeg not to expect any audio
 		"-vcodec", writer.codec,
-		"-pix_fmt", writer.out_pix_fmt,
-		"-b:v", fmt.Sprintf("%d", writer.bitrate), // bitrate
+		"-pix_fmt", "yuv420p", // Output is 8-bit RGB, no alpha
+	}
+
+	// Code from the imageio-ffmpeg project.
+	// https://github.com/imageio/imageio-ffmpeg/blob/master/imageio_ffmpeg/_io.py#L399
+	// If bitrate not given, use a default.
+	if writer.bitrate == 0 {
+		if writer.codec == "libx264" {
+			// Quality between 0 an 51. 51 is worst.
+			command = append(command, "-crf", fmt.Sprintf("%d", int(writer.quality*51)))
+		} else {
+			// Quality between 1 and 31. 31 is worst.
+			command = append(command, "-qscale:v", fmt.Sprintf("%d", int(writer.quality*30)+1))
+		}
+	} else {
+		command = append(command, "-b:v", fmt.Sprintf("%d", writer.bitrate))
 	}
 
 	if strings.HasSuffix(strings.ToLower(writer.filename), ".gif") {

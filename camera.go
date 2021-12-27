@@ -1,4 +1,4 @@
-package main
+package vidio
 
 import (
 	"io"
@@ -55,7 +55,7 @@ func getDevicesWindows() []string {
 
 func getCameraData(device string, camera *Camera) {
 	// Run command to get camera data.
-	// On windows the webcam will turn on and off again.
+	// Webcam will turn on and then off in quick succession.
 	cmd := exec.Command(
 		"ffmpeg",
 		"-hide_banner",
@@ -88,11 +88,10 @@ func getCameraData(device string, camera *Camera) {
 }
 
 func NewCamera(stream int) *Camera {
+	// Check if ffmpeg is installed on the users machine.
 	checkExists("ffmpeg")
 
 	var device string
-	// If OS is windows, we need to parse the listed devices to find which corresponds to the
-	// given "stream" index.
 	switch runtime.GOOS {
 	case "linux":
 		device = "/dev/video" + strconv.Itoa(stream)
@@ -101,6 +100,8 @@ func NewCamera(stream int) *Camera {
 		device = strconv.Itoa(stream)
 		break
 	case "windows":
+		// If OS is windows, we need to parse the listed devices to find which corresponds to the
+		// given "stream" index.
 		devices := getDevicesWindows()
 		if stream >= len(devices) {
 			panic("Could not find devices with index: " + strconv.Itoa(stream))
@@ -123,10 +124,10 @@ func initCamera(camera *Camera) {
 	cmd := exec.Command(
 		"ffmpeg",
 		"-hide_banner",
+		"-loglevel", "quiet",
 		"-f", webcam(),
 		"-i", camera.name,
 		"-f", "image2pipe",
-		"-loglevel", "quiet",
 		"-pix_fmt", "rgb24",
 		"-vcodec", "rawvideo", "-",
 	)
@@ -144,7 +145,7 @@ func initCamera(camera *Camera) {
 	camera.framebuffer = make([]byte, camera.width*camera.height*camera.depth)
 }
 
-func (camera *Camera) NextFrame() bool {
+func (camera *Camera) Read() bool {
 	// If cmd is nil, video reading has not been initialized.
 	if camera.cmd == nil {
 		initCamera(camera)

@@ -1,4 +1,4 @@
-package main
+package vidio
 
 import (
 	"io"
@@ -28,6 +28,7 @@ func NewVideo(filename string) *Video {
 	if !exists(filename) {
 		panic("File: " + filename + " does not exist")
 	}
+	// Check if ffmpeg and ffprobe are installed on the users machine.
 	checkExists("ffmpeg")
 	checkExists("ffprobe")
 	// Extract video information with ffprobe.
@@ -71,8 +72,6 @@ func initVideoStream(video *Video) {
 	// If user exits with Ctrl+C, stop ffmpeg process.
 	video.cleanup()
 
-	// map = {1: "gray", 2: "gray8a", 3: "rgb24", 4: "rgba"}
-
 	cmd := exec.Command(
 		"ffmpeg",
 		"-i", video.filename,
@@ -94,7 +93,7 @@ func initVideoStream(video *Video) {
 	video.framebuffer = make([]byte, video.width*video.height*video.depth)
 }
 
-func (video *Video) NextFrame() bool {
+func (video *Video) Read() bool {
 	// If cmd is nil, video reading has not been initialized.
 	if video.cmd == nil {
 		initVideoStream(video)

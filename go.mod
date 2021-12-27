@@ -1,3 +1,3 @@
-module github.com/AlexEidt/Video-IO
+module github.com/AlexEidt/Vidio
 
 go 1.16

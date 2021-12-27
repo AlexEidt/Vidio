@@ -31,8 +31,8 @@ type Options struct {
 	height      int
 	bitrate     int
 	loop        int
-	macro       int
 	delay       int
+	macro       int
 	fps         float64
 	codec       string
 	in_pix_fmt  string
@@ -53,9 +53,9 @@ func NewVideoWriter(filename string, options *Options) *VideoWriter {
 	// https://github.com/imageio/imageio-ffmpeg/blob/master/imageio_ffmpeg/_io.py#L268
 
 	// GIF settings
-	writer.loop = options.loop
+	writer.loop = options.loop // Default to infinite loop
 	if options.delay == 0 {
-		writer.delay = -1
+		writer.delay = -1 // Default to frame delay of previous frame
 	} else {
 		writer.delay = options.delay
 	}
@@ -99,7 +99,7 @@ func NewVideoWriter(filename string, options *Options) *VideoWriter {
 	return &writer
 }
 
-func (writer *VideoWriter) initVideoWriter() {
+func initVideoWriter(writer *VideoWriter) {
 	// If user exits with Ctrl+C, stop ffmpeg process.
 	writer.cleanup()
 
@@ -163,7 +163,7 @@ func (writer *VideoWriter) initVideoWriter() {
 func (writer *VideoWriter) Write(frame []byte) {
 	// If cmd is nil, video writing has not been set up.
 	if writer.cmd == nil {
-		writer.initVideoWriter()
+		initVideoWriter(writer)
 	}
 	total := 0
 	for total < len(frame) {

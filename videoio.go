@@ -12,7 +12,7 @@ type Video struct {
 	filename    string
 	width       int
 	height      int
-	channels    int
+	depth       int
 	bitrate     int
 	frames      int
 	duration    float64
@@ -25,27 +25,30 @@ type Video struct {
 }
 
 func NewVideo(filename string) *Video {
-	if !Exists(filename) {
+	if !exists(filename) {
 		panic("File: " + filename + " does not exist")
 	}
-	CheckExists("ffmpeg")
-	CheckExists("ffprobe")
+	checkExists("ffmpeg")
+	checkExists("ffprobe")
 	// Extract video information with ffprobe.
 	cmd := exec.Command(
 		"ffprobe",
 		"-show_streams",
-		"-select_streams", "v",
+		"-select_streams", "v", // Only show video data
 		"-print_format", "compact",
 		"-loglevel", "quiet",
 		filename,
 	)
+
 	pipe, err := cmd.StdoutPipe()
 	if err != nil {
 		panic(err)
 	}
+
 	if err := cmd.Start(); err != nil {
 		panic(err)
 	}
+	// Read ffprobe output from Stdout.
 	buffer := make([]byte, 2<<10)
 	total := 0
 	for {
@@ -55,17 +58,20 @@ func NewVideo(filename string) *Video {
 			break
 		}
 	}
+
 	if err := cmd.Wait(); err != nil {
 		panic(err)
 	}
-	video := &Video{filename: filename, channels: 3}
+	video := &Video{filename: filename, depth: 3}
 	parseFFprobe(buffer[:total], video)
 	return video
 }
 
-func (video *Video) initVideoStream() {
+func initVideoStream(video *Video) {
 	// If user exits with Ctrl+C, stop ffmpeg process.
 	video.cleanup()
+
+	// map = {1: "gray", 2: "gray8a", 3: "rgb24", 4: "rgba"}
 
 	cmd := exec.Command(
 		"ffmpeg",
@@ -75,6 +81,7 @@ func (video *Video) initVideoStream() {
 		"-pix_fmt", "rgb24",
 		"-vcodec", "rawvideo", "-",
 	)
+
 	video.cmd = cmd
 	pipe, err := cmd.StdoutPipe()
 	if err != nil {
@@ -84,16 +91,16 @@ func (video *Video) initVideoStream() {
 	if err := cmd.Start(); err != nil {
 		panic(err)
 	}
-	video.framebuffer = make([]byte, video.width*video.height*video.channels)
+	video.framebuffer = make([]byte, video.width*video.height*video.depth)
 }
 
 func (video *Video) NextFrame() bool {
 	// If cmd is nil, video reading has not been initialized.
 	if video.cmd == nil {
-		video.initVideoStream()
+		initVideoStream(video)
 	}
 	total := 0
-	for total < video.width*video.height*video.channels {
+	for total < video.width*video.height*video.depth {
 		n, err := (*video.pipe).Read(video.framebuffer[total:])
 		if err == io.EOF {
 			video.Close()
@@ -108,8 +115,8 @@ func (video *Video) Close() {
 	if video.pipe != nil {
 		(*video.pipe).Close()
 	}
-	if err := video.cmd.Wait(); err != nil {
-		panic(err)
+	if video.cmd != nil {
+		video.cmd.Wait()
 	}
 }
 

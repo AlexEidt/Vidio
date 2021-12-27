@@ -13,15 +13,6 @@ go get github.com/AlexEidt/Vidio
 The `Video` struct stores data about a video file you give it. The code below shows an example of sequentially reading the frames of the given video.
 
 ```go
-video := vidio.NewVideo("input.mp4")
-for video.Read() {
-	// "frame" stores the video frame as a flattened RGB image
-	frame := video.framebuffer // stored as: RGBRGBRGBRGB...
-	// Video processing here...
-}
-```
-
-```go
 type Video struct {
 	filename    string          // Video Filename
 	width       int             // Width of Frames
@@ -36,6 +27,15 @@ type Video struct {
 	framebuffer []byte          // Raw frame data
 	pipe        *io.ReadCloser  // Stdout pipe for ffmpeg process
 	cmd         *exec.Cmd       // ffmpeg command
+}
+```
+
+```go
+video := vidio.NewVideo("input.mp4")
+for video.Read() {
+	// "frame" stores the video frame as a flattened RGB image
+	frame := video.framebuffer // stored as: RGBRGBRGBRGB...
+	// Video processing here...
 }
 ```
 

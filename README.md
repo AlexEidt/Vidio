@@ -77,26 +77,26 @@ type Options struct {
 	loop        int             // For GIFs only. -1=no loop, 0=loop forever, >0=loop n times
 	delay       int             // Delay for Final Frame of GIFs. Default -1 (Use same delay as previous frame)
 	macro       int             // macro size for determining how to resize frames for codecs. Default 16
-	fps			float64         // Frames per second. Default 25
+	fps         float64         // Frames per second. Default 25
 	quality     float64         // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst
-	codec		string          // Codec for video. Default libx264
+	codec       string          // Codec for video. Default libx264
 }
 ```
 
 ```go
 type VideoWriter struct {
-	filename	string          // Output video filename
-	width		int             // Frame width
-	height		int             // Frame height
-	bitrate		int             // Output video bitrate for encoding
-	loop		int             // Number of times for GIF to loop
-	delay		int             // Delay of final frame of GIF
-	macro		int             // macro size for determining how to resize frames for codecs
-	fps			float64         // Frames per second for output video
+	filename    string          // Output video filename
+	width       int             // Frame width
+	height      int             // Frame height
+	bitrate     int             // Output video bitrate for encoding
+	loop        int             // Number of times for GIF to loop
+	delay       int             // Delay of final frame of GIF
+	macro       int             // macro size for determining how to resize frames for codecs
+	fps         float64         // Frames per second for output video
 	quality     float64         // Used if bitrate not given
-	codec		string          // Codec to encode video with
-	pipe		*io.WriteCloser // Stdout pipe of ffmpeg process
-	cmd			*exec.Cmd       // ffmpeg command
+	codec       string          // Codec to encode video with
+	pipe        *io.WriteCloser // Stdout pipe of ffmpeg process
+	cmd         *exec.Cmd       // ffmpeg command
 }
 ```
 

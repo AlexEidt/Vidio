@@ -4,6 +4,8 @@ A simple Video I/O library written in Go. This library relies on [FFmpeg](https:
 
 All frames are encoded and decoded in 8-bit RGB format.
 
+## Installation
+
 ```
 go get github.com/AlexEidt/Vidio
 ```
@@ -104,7 +106,7 @@ type VideoWriter struct {
 
 ```go
 w, h, c := 1920, 1080, 3
-options = vidio.Options{} // Will fill in defaults if empty
+options := vidio.Options{} // Will fill in defaults if empty
 
 writer := vidio.NewVideoWriter("output.mp4", w, h, &options)
 defer writer.Close()
@@ -168,8 +170,8 @@ for webcam.Read() {
 		writer.framebuffer[i+1] = gray
 		writer.framebuffer[i+2] = gray
 	}
-	count++
 	writer.Write(webcam.framebuffer)
+	count++
 	if count > 1000 {
 		break
 	}

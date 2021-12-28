@@ -108,6 +108,8 @@ func NewCamera(stream int) *Camera {
 		}
 		device = "video=" + devices[stream]
 		break
+	default:
+		panic("Unsupported OS: " + runtime.GOOS)
 	}
 
 	camera := &Camera{name: device, depth: 3}

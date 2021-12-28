@@ -168,11 +168,11 @@ for webcam.Read() {
 		writer.framebuffer[i+1] = gray
 		writer.framebuffer[i+2] = gray
 	}
+	count++
 	writer.Write(webcam.framebuffer)
 	if count > 1000 {
 		break
 	}
-	count++
 }
 ```
 

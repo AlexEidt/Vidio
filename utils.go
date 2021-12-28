@@ -91,13 +91,13 @@ func parseDevices(buffer []byte) []string {
 	devices := make([]string, 0)
 	bufferstr := string(buffer)
 
-	index := strings.Index(bufferstr, "DirectShow video devices")
+	index := strings.Index(bufferstr, "DirectShow video device")
 	if index == -1 {
 		return devices
 	}
 	bufferstr = bufferstr[index:]
 
-	index = strings.Index(bufferstr, "DirectShow audio devices")
+	index = strings.Index(bufferstr, "DirectShow audio device")
 	if index != -1 {
 		bufferstr = bufferstr[:index]
 	}

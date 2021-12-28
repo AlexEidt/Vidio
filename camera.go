@@ -63,6 +63,7 @@ func getCameraData(device string, camera *Camera) {
 		"-i", device,
 	)
 
+	camera.cmd = cmd
 	pipe, err := cmd.StderrPipe()
 	if err != nil {
 		panic(err)

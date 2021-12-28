@@ -36,6 +36,9 @@ type Options struct {
 }
 
 func NewVideoWriter(filename string, width, height int, options *Options) *VideoWriter {
+	// Check if ffmpeg is installed on the users machine.
+	checkExists("ffmpeg")
+
 	writer := VideoWriter{filename: filename}
 
 	writer.width = width

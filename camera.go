@@ -112,10 +112,9 @@ func NewCamera(stream int) *Camera {
 		panic("Unsupported OS: " + runtime.GOOS)
 	}
 
-	camera := &Camera{name: device, depth: 3}
-	getCameraData(device, camera)
-
-	return camera
+	camera := Camera{name: device, depth: 3}
+	getCameraData(device, &camera)
+	return &camera
 }
 
 func initCamera(camera *Camera) {

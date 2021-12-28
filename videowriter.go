@@ -84,7 +84,6 @@ func NewVideoWriter(filename string, width, height int, options *Options) *Video
 	} else {
 		writer.codec = options.codec
 	}
-
 	return &writer
 }
 

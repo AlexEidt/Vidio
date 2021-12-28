@@ -88,32 +88,63 @@ func webcam() string {
 // For webcam streaming on windows, ffmpeg requires a device name.
 // All device names are parsed and returned by this function.
 func parseDevices(buffer []byte) []string {
-	devices := make([]string, 0)
 	bufferstr := string(buffer)
 
-	index := strings.Index(bufferstr, "DirectShow video device")
-	if index == -1 {
-		return devices
+	index := strings.Index(strings.ToLower(bufferstr), "directshow video device")
+	if index != -1 {
+		bufferstr = bufferstr[index:]
 	}
-	bufferstr = bufferstr[index:]
 
-	index = strings.Index(bufferstr, "DirectShow audio device")
+	index = strings.Index(strings.ToLower(bufferstr), "directshow audio device")
 	if index != -1 {
 		bufferstr = bufferstr[:index]
 	}
+
+	type Pair struct {
+		name string
+		alt  string
+	}
+	// Parses ffmpeg output to get device names. Windows only.
+	// Uses parsing approach from https://github.com/imageio/imageio/blob/master/imageio/plugins/ffmpeg.py#L681
+
+	pairs := []Pair{}
 	// Find all device names surrounded by quotes. E.g "Windows Camera Front"
-	r := regexp.MustCompile("\"[^\"]+\"")
-	matches := r.FindAllStringSubmatch(bufferstr, -1)
-	for _, match := range matches {
-		device := match[0][1 : len(match[0])-1]
-		// Don't include Alternate Names for devices.
-		// Alternate names start with an '@'.
-		if !strings.HasPrefix(device, "@") {
-			devices = append(devices, device)
+	regex := regexp.MustCompile("\"[^\"]+\"")
+	for _, line := range strings.Split(strings.ReplaceAll(bufferstr, "\r\n", "\n"), "\n") {
+		if strings.Contains(strings.ToLower(line), "alternative name") {
+			match := regex.FindString(line)
+			if len(match) > 0 {
+				pairs[len(pairs)-1].alt = match[1 : len(match)-1]
+			}
+		} else {
+			match := regex.FindString(line)
+			if len(match) > 0 {
+				pairs = append(pairs, Pair{name: match[1 : len(match)-1]})
+			}
+		}
+	}
+
+	devices := []string{}
+	// If two devices have the same name, use the alternate name of the later device as its name
+	for _, pair := range pairs {
+		if contains(devices, pair.name) {
+			devices = append(devices, pair.alt)
+		} else {
+			devices = append(devices, pair.name)
 		}
 	}
 
 	return devices
+}
+
+// Helper function. Array contains function.
+func contains(list []string, item string) bool {
+	for _, i := range list {
+		if i == item {
+			return true
+		}
+	}
+	return false
 }
 
 // Parses the webcam metadata (width, height, fps, codec) from ffmpeg output.

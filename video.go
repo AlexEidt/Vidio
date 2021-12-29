@@ -9,21 +9,23 @@ import (
 )
 
 type Video struct {
-	filename    string
-	width       int
-	height      int
-	depth       int
-	bitrate     int
-	frames      int
-	duration    float64
-	fps         float64
-	codec       string
-	pix_fmt     string
-	framebuffer []byte
-	pipe        *io.ReadCloser
-	cmd         *exec.Cmd
+	filename    string         // Video Filename.
+	width       int            // Width of frames.
+	height      int            // Height of frames.
+	depth       int            // Depth of frames.
+	bitrate     int            // Bitrate for video encoding.
+	frames      int            // Total number of frames.
+	duration    float64        // Duration of video in seconds.
+	fps         float64        // Frames per second.
+	codec       string         // Codec used for video encoding.
+	pix_fmt     string         // Pixel format video is stored in.
+	framebuffer []byte         // Raw frame data.
+	pipe        *io.ReadCloser // Stdout pipe for ffmpeg process.
+	cmd         *exec.Cmd      // ffmpeg command.
 }
 
+// Creates a new Video struct.
+// Uses ffprobe to get video information and fills in the Video struct with this data.
 func NewVideo(filename string) *Video {
 	if !exists(filename) {
 		panic("File: " + filename + " does not exist")
@@ -59,7 +61,7 @@ func NewVideo(filename string) *Video {
 			break
 		}
 	}
-
+	// Wait for ffprobe command to complete.
 	if err := cmd.Wait(); err != nil {
 		panic(err)
 	}
@@ -68,10 +70,12 @@ func NewVideo(filename string) *Video {
 	return video
 }
 
-func initVideoStream(video *Video) {
+// Once the user calls Read() for the first time on a Video struct,
+// the ffmpeg command which is used to read the video is started.
+func initVideo(video *Video) {
 	// If user exits with Ctrl+C, stop ffmpeg process.
 	video.cleanup()
-
+	// ffmpeg command to pipe video data to stdout in 8-bit RGB format.
 	cmd := exec.Command(
 		"ffmpeg",
 		"-i", video.filename,
@@ -93,10 +97,12 @@ func initVideoStream(video *Video) {
 	video.framebuffer = make([]byte, video.width*video.height*video.depth)
 }
 
+// Reads the next frame from the video and stores in the framebuffer.
+// If thelast frame has been read, returns false, otherwise true.
 func (video *Video) Read() bool {
 	// If cmd is nil, video reading has not been initialized.
 	if video.cmd == nil {
-		initVideoStream(video)
+		initVideo(video)
 	}
 	total := 0
 	for total < video.width*video.height*video.depth {
@@ -110,6 +116,7 @@ func (video *Video) Read() bool {
 	return true
 }
 
+// Closes the pipe and stops the ffmpeg process.
 func (video *Video) Close() {
 	if video.pipe != nil {
 		(*video.pipe).Close()
@@ -120,7 +127,7 @@ func (video *Video) Close() {
 }
 
 // Stops the "cmd" process running when the user presses Ctrl+C.
-// https://stackoverflow.com/questions/11268943/is-it-possible-to-capture-a-ctrlc-signal-and-run-a-cleanup-function-in-a-defe
+// https://stackoverflow.com/questions/11268943/is-it-possible-to-capture-a-ctrlc-signal-and-run-a-cleanup-function-in-a-defe.
 func (video *Video) cleanup() {
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)

@@ -11,7 +11,7 @@ import (
 )
 
 // Returns true if file exists, false otherwise.
-// https://stackoverflow.com/questions/12518876/how-to-check-if-a-file-exists-in-go
+// https://stackoverflow.com/questions/12518876/how-to-check-if-a-file-exists-in-go.
 func exists(filename string) bool {
 	_, err := os.Stat(filename)
 	if err == nil {
@@ -105,7 +105,7 @@ func parseDevices(buffer []byte) []string {
 		alt  string
 	}
 	// Parses ffmpeg output to get device names. Windows only.
-	// Uses parsing approach from https://github.com/imageio/imageio/blob/master/imageio/plugins/ffmpeg.py#L681
+	// Uses parsing approach from https://github.com/imageio/imageio/blob/master/imageio/plugins/ffmpeg.py#L681.
 
 	pairs := []Pair{}
 	// Find all device names surrounded by quotes. E.g "Windows Camera Front"
@@ -125,7 +125,7 @@ func parseDevices(buffer []byte) []string {
 	}
 
 	devices := []string{}
-	// If two devices have the same name, use the alternate name of the later device as its name
+	// If two devices have the same name, use the alternate name of the later device as its name.
 	for _, pair := range pairs {
 		if contains(devices, pair.name) {
 			devices = append(devices, pair.alt)
@@ -155,7 +155,7 @@ func parseWebcamData(buffer []byte, camera *Camera) {
 		index++
 	}
 	bufferstr = bufferstr[index:]
-	// Dimensions. widthxheight
+	// Dimensions. widthxheight.
 	regex := regexp.MustCompile("\\d{2,}x\\d{2,}")
 	match := regex.FindString(bufferstr)
 	if len(match) > 0 {
@@ -163,7 +163,7 @@ func parseWebcamData(buffer []byte, camera *Camera) {
 		camera.width = int(parse(split[0]))
 		camera.height = int(parse(split[1]))
 	}
-	// FPS
+	// FPS.
 	regex = regexp.MustCompile("\\d+(.\\d+)? fps")
 	match = regex.FindString(bufferstr)
 	if len(match) > 0 {
@@ -173,7 +173,7 @@ func parseWebcamData(buffer []byte, camera *Camera) {
 		}
 		camera.fps = parse(match)
 	}
-	// Codec
+	// Codec.
 	regex = regexp.MustCompile("Video: .+,")
 	match = regex.FindString(bufferstr)
 	if len(match) > 0 {

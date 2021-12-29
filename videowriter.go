@@ -11,30 +11,32 @@ import (
 )
 
 type VideoWriter struct {
-	filename string
-	width    int
-	height   int
-	bitrate  int
-	loop     int // For GIFs. -1=no loop, 0=loop forever, >0=loop n times
-	delay    int // Delay for Final Frame of GIFs.
-	macro    int
-	fps      float64
-	quality  float64
-	codec    string
-	pipe     *io.WriteCloser
-	cmd      *exec.Cmd
+	filename string          // Output filename.
+	width    int             // Frame width.
+	height   int             // Frame height.
+	bitrate  int             // Output video bitrate.
+	loop     int             // Number of times for GIF to loop.
+	delay    int             // Delay of final frame of GIF. Default -1 (same delay as previous frame).
+	macro    int             // Macroblock size for determining how to resize frames for codecs.
+	fps      float64         // Frames per second for output video. Default 25.
+	quality  float64         // Used if bitrate not given. Default 0.5.
+	codec    string          // Codec to encode video with. Default libx264.
+	pipe     *io.WriteCloser // Stdout pipe of ffmpeg process.
+	cmd      *exec.Cmd       // ffmpeg command.
 }
 
+// Optional parameters for VideoWriter.
 type Options struct {
-	bitrate int
-	loop    int
-	delay   int
-	macro   int
-	fps     float64
-	quality float64
-	codec   string
+	bitrate int     // Bitrate.
+	loop    int     // For GIFs only. -1=no loop, 0=infinite loop, >0=number of loops.
+	delay   int     // Delay for final frame of GIFs.
+	macro   int     // Macroblock size for determining how to resize frames for codecs.
+	fps     float64 // Frames per second for output video.
+	quality float64 // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst.
+	codec   string  // Codec for video.
 }
 
+// Creates a new VideoWriter struct with default values from the Options struct.
 func NewVideoWriter(filename string, width, height int, options *Options) *VideoWriter {
 	// Check if ffmpeg is installed on the users machine.
 	checkExists("ffmpeg")
@@ -45,12 +47,12 @@ func NewVideoWriter(filename string, width, height int, options *Options) *Video
 	writer.height = height
 
 	// Default Parameter options logic from:
-	// https://github.com/imageio/imageio-ffmpeg/blob/master/imageio_ffmpeg/_io.py#L268
+	// https://github.com/imageio/imageio-ffmpeg/blob/master/imageio_ffmpeg/_io.py#L268.
 
 	// GIF settings
-	writer.loop = options.loop // Default to infinite loop
+	writer.loop = options.loop // Default to infinite loop.
 	if options.delay == 0 {
-		writer.delay = -1 // Default to frame delay of previous frame
+		writer.delay = -1 // Default to frame delay of previous frame.
 	} else {
 		writer.delay = options.delay
 	}
@@ -87,26 +89,28 @@ func NewVideoWriter(filename string, width, height int, options *Options) *Video
 	return &writer
 }
 
+// Once the user calls Write() for the first time on a VideoWriter struct,
+// the ffmpeg command which is used to write to the video file is started.
 func initVideoWriter(writer *VideoWriter) {
 	// If user exits with Ctrl+C, stop ffmpeg process.
 	writer.cleanup()
-
+	// ffmpeg command to write to video file. Takes in bytes from Stdin and encodes them.
 	command := []string{
-		"-y", // overwrite output file if it exists
+		"-y", // overwrite output file if it exists.
 		"-loglevel", "quiet",
 		"-f", "rawvideo",
 		"-vcodec", "rawvideo",
-		"-s", fmt.Sprintf("%dx%d", writer.width, writer.height), // frame w x h
+		"-s", fmt.Sprintf("%dx%d", writer.width, writer.height), // frame w x h.
 		"-pix_fmt", "rgb24",
-		"-r", fmt.Sprintf("%.02f", writer.fps), // frames per second
-		"-i", "-", // The input comes from stdin
-		"-an", // Tells ffmpeg not to expect any audio
+		"-r", fmt.Sprintf("%.02f", writer.fps), // frames per second.
+		"-i", "-", // The input comes from stdin.
+		"-an", // Tells ffmpeg not to expect any audio.
 		"-vcodec", writer.codec,
-		"-pix_fmt", "yuv420p", // Output is 8-bit RGB, no alpha
+		"-pix_fmt", "yuv420p", // Output is 8-bit RGB, no alpha.
 	}
 
 	// Code from the imageio-ffmpeg project.
-	// https://github.com/imageio/imageio-ffmpeg/blob/master/imageio_ffmpeg/_io.py#L399
+	// https://github.com/imageio/imageio-ffmpeg/blob/master/imageio_ffmpeg/_io.py#L399.
 	// If bitrate not given, use a default.
 	if writer.bitrate == 0 {
 		if writer.codec == "libx264" {
@@ -119,7 +123,7 @@ func initVideoWriter(writer *VideoWriter) {
 	} else {
 		command = append(command, "-b:v", fmt.Sprintf("%d", writer.bitrate))
 	}
-
+	// For GIFs, add looping and delay parameters.
 	if strings.HasSuffix(strings.ToLower(writer.filename), ".gif") {
 		command = append(
 			command,
@@ -129,7 +133,7 @@ func initVideoWriter(writer *VideoWriter) {
 	}
 
 	// Code from the imageio-ffmpeg project:
-	// https://github.com/imageio/imageio-ffmpeg/blob/master/imageio_ffmpeg/_io.py#L415
+	// https://github.com/imageio/imageio-ffmpeg/blob/master/imageio_ffmpeg/_io.py#L415.
 	// Resizes the video frames to a size that works with most codecs.
 	if writer.macro > 1 {
 		if writer.width%writer.macro > 0 || writer.height%writer.macro > 0 {
@@ -162,6 +166,7 @@ func initVideoWriter(writer *VideoWriter) {
 	}
 }
 
+// Writes the given frame to the video file.
 func (writer *VideoWriter) Write(frame []byte) {
 	// If cmd is nil, video writing has not been set up.
 	if writer.cmd == nil {
@@ -178,6 +183,7 @@ func (writer *VideoWriter) Write(frame []byte) {
 	}
 }
 
+// Closes the pipe and stops the ffmpeg process.
 func (writer *VideoWriter) Close() {
 	if writer.pipe != nil {
 		(*writer.pipe).Close()
@@ -188,7 +194,7 @@ func (writer *VideoWriter) Close() {
 }
 
 // Stops the "cmd" process running when the user presses Ctrl+C.
-// https://stackoverflow.com/questions/11268943/is-it-possible-to-capture-a-ctrlc-signal-and-run-a-cleanup-function-in-a-defe
+// https://stackoverflow.com/questions/11268943/is-it-possible-to-capture-a-ctrlc-signal-and-run-a-cleanup-function-in-a-defe.
 func (writer *VideoWriter) cleanup() {
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)

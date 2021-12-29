@@ -11,17 +11,19 @@ import (
 )
 
 type Camera struct {
-	name        string
-	width       int
-	height      int
-	depth       int
-	fps         float64
-	codec       string
-	framebuffer []byte
-	pipe        *io.ReadCloser
-	cmd         *exec.Cmd
+	name        string         // Camera device name.
+	width       int            // Camera frame width.
+	height      int            // Camera frame height.
+	depth       int            // Camera frame depth.
+	fps         float64        // Camera frame rate.
+	codec       string         // Camera codec.
+	framebuffer []byte         // Raw frame data.
+	pipe        *io.ReadCloser // Stdout pipe for ffmpeg process streaming webcam.
+	cmd         *exec.Cmd      // ffmpeg command.
 }
 
+// Returns the webcam device name.
+// On windows, ffmpeg output from the -list_devices command is parsed to find the device name.
 func getDevicesWindows() []string {
 	// Run command to get list of devices.
 	cmd := exec.Command(
@@ -53,6 +55,7 @@ func getDevicesWindows() []string {
 	return devices
 }
 
+// Get camera meta data such as width, height, fps and codec.
 func getCameraData(device string, camera *Camera) {
 	// Run command to get camera data.
 	// Webcam will turn on and then off in quick succession.
@@ -62,12 +65,13 @@ func getCameraData(device string, camera *Camera) {
 		"-f", webcam(),
 		"-i", device,
 	)
-
+	// The command will fail since we do not give a file to write to, therefore
+	// it will write the meta data to Stderr.
 	pipe, err := cmd.StderrPipe()
 	if err != nil {
 		panic(err)
 	}
-
+	// Start the command.
 	if err := cmd.Start(); err != nil {
 		panic(err)
 	}
@@ -81,12 +85,13 @@ func getCameraData(device string, camera *Camera) {
 			break
 		}
 	}
-
+	// Wait for the command to finish.
 	cmd.Wait()
 
 	parseWebcamData(buffer[:total], camera)
 }
 
+// Creates a new camera struct that can read from the device with the given stream index.
 func NewCamera(stream int) *Camera {
 	// Check if ffmpeg is installed on the users machine.
 	checkExists("ffmpeg")
@@ -117,6 +122,8 @@ func NewCamera(stream int) *Camera {
 	return &camera
 }
 
+// Once the user calls Read() for the first time on a Camera struct,
+// the ffmpeg command which is used to read the camera device is started.
 func initCamera(camera *Camera) {
 	// If user exits with Ctrl+C, stop ffmpeg process.
 	camera.cleanup()
@@ -146,6 +153,7 @@ func initCamera(camera *Camera) {
 	camera.framebuffer = make([]byte, camera.width*camera.height*camera.depth)
 }
 
+// Reads the next frame from the webcam and stores in the framebuffer.
 func (camera *Camera) Read() bool {
 	// If cmd is nil, video reading has not been initialized.
 	if camera.cmd == nil {
@@ -159,6 +167,7 @@ func (camera *Camera) Read() bool {
 	return true
 }
 
+// Closes the pipe and stops the ffmpeg process.
 func (camera *Camera) Close() {
 	if camera.pipe != nil {
 		(*camera.pipe).Close()
@@ -169,7 +178,7 @@ func (camera *Camera) Close() {
 }
 
 // Stops the "cmd" process running when the user presses Ctrl+C.
-// https://stackoverflow.com/questions/11268943/is-it-possible-to-capture-a-ctrlc-signal-and-run-a-cleanup-function-in-a-defe
+// https://stackoverflow.com/questions/11268943/is-it-possible-to-capture-a-ctrlc-signal-and-run-a-cleanup-function-in-a-defe.
 func (camera *Camera) cleanup() {
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)

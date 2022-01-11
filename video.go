@@ -98,7 +98,7 @@ func initVideo(video *Video) {
 }
 
 // Reads the next frame from the video and stores in the framebuffer.
-// If thelast frame has been read, returns false, otherwise true.
+// If the last frame has been read, returns false, otherwise true.
 func (video *Video) Read() bool {
 	// If cmd is nil, video reading has not been initialized.
 	if video.cmd == nil {

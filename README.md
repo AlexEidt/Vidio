@@ -93,7 +93,7 @@ type Options struct {
 ```go
 type VideoWriter struct {
 	filename    string          // Output filename
-	audio       string          // Audio filename.
+	audio       string          // Audio filename
 	width       int             // Frame width
 	height      int             // Frame height
 	bitrate     int             // Output video bitrate

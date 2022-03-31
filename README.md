@@ -143,7 +143,7 @@ Copy `input.mp4` to `output.mp4`. Copy the audio from `input.mp4` to `output.mp4
 video := vidio.NewVideo("input.mp4")
 options := vidio.Options{
 	fps: video.fps,
-	bitrate: video.bitrate
+	bitrate: video.bitrate,
 	audio: "input.mp4",
 }
 

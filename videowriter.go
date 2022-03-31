@@ -11,29 +11,33 @@ import (
 )
 
 type VideoWriter struct {
-	filename string          // Output filename.
-	width    int             // Frame width.
-	height   int             // Frame height.
-	bitrate  int             // Output video bitrate.
-	loop     int             // Number of times for GIF to loop.
-	delay    int             // Delay of final frame of GIF. Default -1 (same delay as previous frame).
-	macro    int             // Macroblock size for determining how to resize frames for codecs.
-	fps      float64         // Frames per second for output video. Default 25.
-	quality  float64         // Used if bitrate not given. Default 0.5.
-	codec    string          // Codec to encode video with. Default libx264.
-	pipe     *io.WriteCloser // Stdout pipe of ffmpeg process.
-	cmd      *exec.Cmd       // ffmpeg command.
+	filename    string          // Output filename.
+	audio       string          // Audio filename.
+	width       int             // Frame width.
+	height      int             // Frame height.
+	bitrate     int             // Output video bitrate.
+	loop        int             // Number of times for GIF to loop.
+	delay       int             // Delay of final frame of GIF. Default -1 (same delay as previous frame).
+	macro       int             // Macroblock size for determining how to resize frames for codecs.
+	fps         float64         // Frames per second for output video. Default 25.
+	quality     float64         // Used if bitrate not given. Default 0.5.
+	codec       string          // Codec to encode video with. Default libx264.
+	audio_codec string          // Codec to encode audio with. Default aac.
+	pipe        *io.WriteCloser // Stdout pipe of ffmpeg process.
+	cmd         *exec.Cmd       // ffmpeg command.
 }
 
 // Optional parameters for VideoWriter.
 type Options struct {
-	bitrate int     // Bitrate.
-	loop    int     // For GIFs only. -1=no loop, 0=infinite loop, >0=number of loops.
-	delay   int     // Delay for final frame of GIFs.
-	macro   int     // Macroblock size for determining how to resize frames for codecs.
-	fps     float64 // Frames per second for output video.
-	quality float64 // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst.
-	codec   string  // Codec for video.
+	bitrate     int     // Bitrate.
+	loop        int     // For GIFs only. -1=no loop, 0=infinite loop, >0=number of loops.
+	delay       int     // Delay for final frame of GIFs.
+	macro       int     // Macroblock size for determining how to resize frames for codecs.
+	fps         float64 // Frames per second for output video.
+	quality     float64 // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst.
+	codec       string  // Codec for video.
+	audio       string  // File path for audio. If no audio, audio=nil.
+	audio_codec string  // Codec for audio.
 }
 
 // Creates a new VideoWriter struct with default values from the Options struct.
@@ -86,6 +90,20 @@ func NewVideoWriter(filename string, width, height int, options *Options) *Video
 	} else {
 		writer.codec = options.codec
 	}
+
+	if options.audio != "" {
+		if !exists(options.audio) {
+			panic("Audio file does not exist.")
+		}
+		writer.audio = options.audio
+
+		if options.audio_codec == "" {
+			writer.audio_codec = "aac"
+		} else {
+			writer.audio_codec = options.audio_codec
+		}
+	}
+
 	return &writer
 }
 
@@ -104,10 +122,24 @@ func initVideoWriter(writer *VideoWriter) {
 		"-pix_fmt", "rgb24",
 		"-r", fmt.Sprintf("%.02f", writer.fps), // frames per second.
 		"-i", "-", // The input comes from stdin.
-		"-an", // Tells ffmpeg not to expect any audio.
-		"-vcodec", writer.codec,
-		"-pix_fmt", "yuv420p", // Output is 8-bit RGB, no alpha.
 	}
+
+	gif := strings.HasSuffix(strings.ToLower(writer.filename), ".gif")
+
+	if writer.audio == "" || gif {
+		command = append(command, "-an") // No audio.
+	} else {
+		command = append(
+			command,
+			"-i", writer.audio,
+		)
+	}
+
+	command = append(
+		command,
+		"-vcodec", writer.codec,
+		"-pix_fmt", "yuv420p", // Output is 8-but RGB, no alpha.
+	)
 
 	// Code from the imageio-ffmpeg project.
 	// https://github.com/imageio/imageio-ffmpeg/blob/master/imageio_ffmpeg/_io.py#L399.
@@ -124,7 +156,7 @@ func initVideoWriter(writer *VideoWriter) {
 		command = append(command, "-b:v", fmt.Sprintf("%d", writer.bitrate))
 	}
 	// For GIFs, add looping and delay parameters.
-	if strings.HasSuffix(strings.ToLower(writer.filename), ".gif") {
+	if gif {
 		command = append(
 			command,
 			"-loop", fmt.Sprintf("%d", writer.loop),
@@ -150,6 +182,16 @@ func initVideoWriter(writer *VideoWriter) {
 				"-vf", fmt.Sprintf("scale=%d:%d", width, height),
 			)
 		}
+	}
+
+	// If audio was included, then specify video and audio channels.
+	if writer.audio != "" {
+		command = append(
+			command,
+			"-acodec", writer.audio_codec,
+			"-map", "0:v:0",
+			"-map", "1:a:0",
+		)
 	}
 
 	command = append(command, writer.filename)

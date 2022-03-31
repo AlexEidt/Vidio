@@ -35,7 +35,7 @@ func checkExists(program string) {
 }
 
 // Parse ffprobe output to fill in video data.
-func parseFFprobe(input []byte, video *Video) {
+func parseFFprobe(input []byte) map[string]string {
 	data := make(map[string]string)
 	for _, line := range strings.Split(string(input), "|") {
 		if strings.Contains(line, "=") {
@@ -45,7 +45,11 @@ func parseFFprobe(input []byte, video *Video) {
 			}
 		}
 	}
+	return data
+}
 
+// Adds Video data to the video struct from the ffprobe output.
+func addVideoData(data map[string]string, video *Video) {
 	video.width = int(parse(data["width"]))
 	video.height = int(parse(data["height"]))
 	video.duration = float64(parse(data["duration"]))
@@ -133,7 +137,6 @@ func parseDevices(buffer []byte) []string {
 			devices = append(devices, pair.name)
 		}
 	}
-
 	return devices
 }
 

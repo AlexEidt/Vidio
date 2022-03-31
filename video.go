@@ -18,6 +18,7 @@ type Video struct {
 	duration    float64        // Duration of video in seconds.
 	fps         float64        // Frames per second.
 	codec       string         // Codec used for video encoding.
+	audio_codec string         // Codec used for audio encoding.
 	pix_fmt     string         // Pixel format video is stored in.
 	framebuffer []byte         // Raw frame data.
 	pipe        *io.ReadCloser // Stdout pipe for ffmpeg process.
@@ -33,40 +34,53 @@ func NewVideo(filename string) *Video {
 	// Check if ffmpeg and ffprobe are installed on the users machine.
 	checkExists("ffmpeg")
 	checkExists("ffprobe")
-	// Extract video information with ffprobe.
-	cmd := exec.Command(
-		"ffprobe",
-		"-show_streams",
-		"-select_streams", "v", // Only show video data
-		"-print_format", "compact",
-		"-loglevel", "quiet",
-		filename,
-	)
 
-	pipe, err := cmd.StdoutPipe()
-	if err != nil {
-		panic(err)
-	}
+	ffprobe := func(stype string) map[string]string {
+		// "stype" is stream stype. "v" for video, "a" for audio.
+		// Extract video information with ffprobe.
+		cmd := exec.Command(
+			"ffprobe",
+			"-show_streams",
+			"-select_streams", stype, // Only show video data
+			"-print_format", "compact",
+			"-loglevel", "quiet",
+			filename,
+		)
 
-	if err := cmd.Start(); err != nil {
-		panic(err)
-	}
-	// Read ffprobe output from Stdout.
-	buffer := make([]byte, 2<<10)
-	total := 0
-	for {
-		n, err := pipe.Read(buffer[total:])
-		total += n
-		if err == io.EOF {
-			break
+		pipe, err := cmd.StdoutPipe()
+		if err != nil {
+			panic(err)
 		}
+
+		if err := cmd.Start(); err != nil {
+			panic(err)
+		}
+		// Read ffprobe output from Stdout.
+		buffer := make([]byte, 2<<10)
+		total := 0
+		for {
+			n, err := pipe.Read(buffer[total:])
+			total += n
+			if err == io.EOF {
+				break
+			}
+		}
+		// Wait for ffprobe command to complete.
+		if err := cmd.Wait(); err != nil {
+			panic(err)
+		}
+
+		return parseFFprobe(buffer[:total])
 	}
-	// Wait for ffprobe command to complete.
-	if err := cmd.Wait(); err != nil {
-		panic(err)
-	}
+
+	videoData := ffprobe("v")
+	audioData := ffprobe("a")
+
 	video := &Video{filename: filename, depth: 3}
-	parseFFprobe(buffer[:total], video)
+
+	addVideoData(videoData, video)
+	video.audio_codec = audioData["codec_name"]
+
 	return video
 }
 

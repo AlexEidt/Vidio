@@ -1,6 +1,6 @@
 # Vidio
 
-A simple Video I/O library written in Go. This library relies on [FFmpeg](https://www.ffmpeg.org/), and [FFProbe](https://www.ffmpeg.org/) which must be downloaded before usage.
+A simple Video I/O library written in Go. This library relies on [FFmpeg](https://www.ffmpeg.org/), and [FFProbe](https://www.ffmpeg.org/) which must be downloaded before usage and added to the system path.
 
 All frames are encoded and decoded in 8-bit RGB format.
 
@@ -25,6 +25,7 @@ type Video struct {
 	duration    float64         // Duration in seconds
 	fps         float64         // Frames per second
 	codec       string          // Codec used to encode video
+	audio_codec string          // Codec used for audio encoding
 	pix_fmt     string          // Pixel format video is stored in
 	framebuffer []byte          // Raw frame data
 	pipe        *io.ReadCloser  // Stdout pipe for ffmpeg process
@@ -43,7 +44,7 @@ for video.Read() {
 
 ## `Camera`
 
-The `Camera` can read from any cameras on the device running Vidio. It takes in the stream index. On most machines the webcam device has index 0.
+The `Camera` can read from any cameras on the device running Vidio. It takes in the stream index. On most machines the webcam device has index 0. Note that audio retrieval from the microphone is not yet supported.
 
 ```go
 type Camera struct {
@@ -84,21 +85,25 @@ type Options struct {
 	fps         float64         // Frames per second. Default 25
 	quality     float64         // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst
 	codec       string          // Codec for video. Default libx264
+	audio       string          // File path for audio for the video. If no audio, audio=nil.
+	audio_codec string          // Codec for audio. Default aac
 }
 ```
 
 ```go
 type VideoWriter struct {
-	filename    string          // Output video filename
+	filename    string          // Output filename
+	audio       string          // Audio filename.
 	width       int             // Frame width
 	height      int             // Frame height
-	bitrate     int             // Output video bitrate for encoding
+	bitrate     int             // Output video bitrate
 	loop        int             // Number of times for GIF to loop
-	delay       int             // Delay of final frame of GIF
-	macro       int             // macro size for determining how to resize frames for codecs
-	fps         float64         // Frames per second for output video
-	quality     float64         // Used if bitrate not given
-	codec       string          // Codec to encode video with
+	delay       int             // Delay of final frame of GIF. Default -1 (same delay as previous frame)
+	macro       int             // Macroblock size for determining how to resize frames for codecs
+	fps         float64         // Frames per second for output video. Default 25
+	quality     float64         // Used if bitrate not given. Default 0.5
+	codec       string          // Codec to encode video with. Default libx264
+	audio_codec string          // Codec to encode audio with. Default aac
 	pipe        *io.WriteCloser // Stdout pipe of ffmpeg process
 	cmd         *exec.Cmd       // ffmpeg command
 }
@@ -132,13 +137,14 @@ vidio.Write("output.jpg", w, h, img)
 
 ## Examples
 
-Copy `input.mp4` to `output.mp4`.
+Copy `input.mp4` to `output.mp4`. Copy the audio from `input.mp4` to `output.mp4` as well.
 
 ```go
 video := vidio.NewVideo("input.mp4")
 options := vidio.Options{
 	fps: video.fps,
 	bitrate: video.bitrate
+	audio: "input.mp4",
 }
 
 writer := vidio.NewVideoWriter("output.mp4", video.width, video.height, &options)

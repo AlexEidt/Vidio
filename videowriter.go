@@ -155,6 +155,7 @@ func initVideoWriter(writer *VideoWriter) {
 	} else {
 		command = append(command, "-b:v", fmt.Sprintf("%d", writer.bitrate))
 	}
+
 	// For GIFs, add looping and delay parameters.
 	if gif {
 		command = append(

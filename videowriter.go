@@ -185,7 +185,7 @@ func initVideoWriter(writer *VideoWriter) {
 	}
 
 	// If audio was included, then specify video and audio channels.
-	if writer.audio != "" {
+	if writer.audio != "" && !gif {
 		command = append(
 			command,
 			"-acodec", writer.audio_codec,

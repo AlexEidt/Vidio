@@ -50,19 +50,35 @@ func parseFFprobe(input []byte) map[string]string {
 
 // Adds Video data to the video struct from the ffprobe output.
 func addVideoData(data map[string]string, video *Video) {
-	video.width = int(parse(data["width"]))
-	video.height = int(parse(data["height"]))
-	video.duration = float64(parse(data["duration"]))
-	video.frames = int(parse(data["nb_frames"]))
-
-	split := strings.Split(data["r_frame_rate"], "/")
-	if len(split) == 2 && split[0] != "" && split[1] != "" {
-		video.fps = parse(split[0]) / parse(split[1])
+	if width, ok := data["width"]; ok {
+		video.width = int(parse(width))
+	}
+	if height, ok := data["height"]; ok {
+		video.height = int(parse(height))
+	}
+	if duration, ok := data["duration"]; ok {
+		video.duration = float64(parse(duration))
+	}
+	if frames, ok := data["nb_frames"]; ok {
+		video.frames = int(parse(frames))
 	}
 
-	video.bitrate = int(parse(data["bit_rate"]))
-	video.codec = data["codec_name"]
-	video.pix_fmt = data["pix_fmt"]
+	if fps, ok := data["r_frame_rate"]; ok {
+		split := strings.Split(fps, "/")
+		if len(split) == 2 && split[0] != "" && split[1] != "" {
+			video.fps = parse(split[0]) / parse(split[1])
+		}
+	}
+
+	if bitrate, ok := data["bit_rate"]; ok {
+		video.bitrate = int(parse(bitrate))
+	}
+	if codec, ok := data["codec_name"]; ok {
+		video.codec = codec
+	}
+	if pix_fmt, ok := data["pix_fmt"]; ok {
+		video.pix_fmt = pix_fmt
+	}
 }
 
 // Parses the given data into a float64.

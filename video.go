@@ -79,7 +79,9 @@ func NewVideo(filename string) *Video {
 	video := &Video{filename: filename, depth: 3}
 
 	addVideoData(videoData, video)
-	video.audio_codec = audioData["codec_name"]
+	if audio_codec, ok := audioData["codec_name"]; ok {
+		video.audio_codec = audio_codec
+	}
 
 	return video
 }

@@ -93,8 +93,13 @@ func NewVideoWriter(filename string, width, height int, options *Options) *Video
 
 	if options.audio != "" {
 		if !exists(options.audio) {
-			panic("Audio file does not exist.")
+			panic("Audio file " + options.audio + " does not exist.")
 		}
+
+		if len(ffprobe(options.audio, "a")) == 0 {
+			panic("Given \"audio\" file " + options.audio + " has no audio.")
+		}
+
 		writer.audio = options.audio
 
 		if options.audio_codec == "" {

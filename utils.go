@@ -2,6 +2,7 @@ package vidio
 
 import (
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"regexp"
@@ -32,6 +33,45 @@ func checkExists(program string) {
 	if err := cmd.Wait(); err != nil {
 		panic(program + " is not installed.")
 	}
+}
+
+// Runs ffprobe on the given file and returns a map of the metadata.
+func ffprobe(filename, stype string) map[string]string {
+	// "stype" is stream stype. "v" for video, "a" for audio.
+	// Extract video information with ffprobe.
+	cmd := exec.Command(
+		"ffprobe",
+		"-show_streams",
+		"-select_streams", stype, // Only show video data
+		"-print_format", "compact",
+		"-loglevel", "quiet",
+		filename,
+	)
+
+	pipe, err := cmd.StdoutPipe()
+	if err != nil {
+		panic(err)
+	}
+
+	if err := cmd.Start(); err != nil {
+		panic(err)
+	}
+	// Read ffprobe output from Stdout.
+	buffer := make([]byte, 2<<10)
+	total := 0
+	for {
+		n, err := pipe.Read(buffer[total:])
+		total += n
+		if err == io.EOF {
+			break
+		}
+	}
+	// Wait for ffprobe command to complete.
+	if err := cmd.Wait(); err != nil {
+		panic(err)
+	}
+
+	return parseFFprobe(buffer[:total])
 }
 
 // Parse ffprobe output to fill in video data.

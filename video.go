@@ -29,52 +29,14 @@ type Video struct {
 // Uses ffprobe to get video information and fills in the Video struct with this data.
 func NewVideo(filename string) *Video {
 	if !exists(filename) {
-		panic("File: " + filename + " does not exist")
+		panic("Video file " + filename + " does not exist")
 	}
 	// Check if ffmpeg and ffprobe are installed on the users machine.
 	checkExists("ffmpeg")
 	checkExists("ffprobe")
 
-	ffprobe := func(stype string) map[string]string {
-		// "stype" is stream stype. "v" for video, "a" for audio.
-		// Extract video information with ffprobe.
-		cmd := exec.Command(
-			"ffprobe",
-			"-show_streams",
-			"-select_streams", stype, // Only show video data
-			"-print_format", "compact",
-			"-loglevel", "quiet",
-			filename,
-		)
-
-		pipe, err := cmd.StdoutPipe()
-		if err != nil {
-			panic(err)
-		}
-
-		if err := cmd.Start(); err != nil {
-			panic(err)
-		}
-		// Read ffprobe output from Stdout.
-		buffer := make([]byte, 2<<10)
-		total := 0
-		for {
-			n, err := pipe.Read(buffer[total:])
-			total += n
-			if err == io.EOF {
-				break
-			}
-		}
-		// Wait for ffprobe command to complete.
-		if err := cmd.Wait(); err != nil {
-			panic(err)
-		}
-
-		return parseFFprobe(buffer[:total])
-	}
-
-	videoData := ffprobe("v")
-	audioData := ffprobe("a")
+	videoData := ffprobe(filename, "v")
+	audioData := ffprobe(filename, "a")
 
 	video := &Video{filename: filename, depth: 3}
 

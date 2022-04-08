@@ -172,9 +172,9 @@ for webcam.Read() {
 		rgb := webcam.framebuffer[i : i+3]
 		r, g, b := int(rgb[0]), int(rgb[1]), int(rgb[2])
 		gray := uint8((3*r + 4*g + b) / 8)
-		writer.framebuffer[i] = gray
-		writer.framebuffer[i+1] = gray
-		writer.framebuffer[i+2] = gray
+		webcam.framebuffer[i] = gray
+		webcam.framebuffer[i+1] = gray
+		webcam.framebuffer[i+2] = gray
 	}
 	writer.Write(webcam.framebuffer)
 	count++

@@ -42,7 +42,7 @@ func ffprobe(filename, stype string) map[string]string {
 	cmd := exec.Command(
 		"ffprobe",
 		"-show_streams",
-		"-select_streams", stype, // Only show video data
+		"-select_streams", stype,
 		"-print_format", "compact",
 		"-loglevel", "quiet",
 		filename,

@@ -49,11 +49,10 @@ func NewVideoWriter(filename string, width, height int, options *Options) *Video
 
 	writer.width = width
 	writer.height = height
+	writer.bitrate = options.bitrate
 
 	// Default Parameter options logic from:
 	// https://github.com/imageio/imageio-ffmpeg/blob/master/imageio_ffmpeg/_io.py#L268.
-
-	writer.bitrate = options.bitrate
 
 	// GIF settings
 	writer.loop = options.loop // Default to infinite loop.

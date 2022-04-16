@@ -39,7 +39,7 @@ for video.Read() {
 
 ## `Camera`
 
-The `Camera` can read from any cameras on the device running Vidio. It takes in the stream index. The index corresponds to the order in which the devices names appear when running `ffmpeg -list_devices true -f dshow -i dummy`. Alternative device names are included in this index. On most machines the webcam device has index 0. Note that audio retrieval from the microphone is not yet supported.
+The `Camera` can read from any cameras on the device running Vidio. It takes in the stream index. For **Windows**, the index corresponds to the order in which the devices names appear when running `ffmpeg -list_devices true -f dshow -i dummy`. Alternative device names are included in this index. On most machines the webcam device has index 0. Note that audio retrieval from the microphone is not yet supported.
 
 ```go
 Name() string

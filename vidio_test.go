@@ -96,6 +96,14 @@ func TestCameraIO(t *testing.T) {
 	count := 0
 	for webcam.Read() {
 		frame := webcam.FrameBuffer()
+		for i := 0; i < len(frame); i += 3 {
+			rgb := frame[i : i+3]
+			r, g, b := int(rgb[0]), int(rgb[1]), int(rgb[2])
+			gray := uint8((3*r + 4*g + b) / 8)
+			frame[i] = gray
+			frame[i+1] = gray
+			frame[i+2] = gray
+		}
 		writer.Write(frame)
 		count++
 		if count > 100 {
@@ -106,7 +114,7 @@ func TestCameraIO(t *testing.T) {
 	webcam.Close()
 	writer.Close()
 
-	//os.Remove("test/camera.mp4")
+	os.Remove("test/camera.mp4")
 	fmt.Println("Camera IO Test Passed")
 }
 

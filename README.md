@@ -25,7 +25,7 @@ Duration() float64
 FPS() float64
 Codec() string
 AudioCodec() string
-FrameBuffer() string
+FrameBuffer() []byte
 ```
 
 ```go
@@ -48,7 +48,7 @@ Height() int
 Depth() int
 FPS() float64
 Codec() string
-FrameBuffer() string
+FrameBuffer() []byte
 ```
 
 ```go

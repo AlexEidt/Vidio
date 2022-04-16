@@ -133,7 +133,7 @@ options := vidio.Options{
 	Audio: "input.mp4",
 }
 
-writer := vidio.NewVideoWriter("output.mp4", video.width, video.height, &options)
+writer := vidio.NewVideoWriter("output.mp4", video.Width(), video.Height(), &options)
 defer writer.Close()
 
 for video.Read() {
@@ -149,7 +149,7 @@ defer webcam.Close()
 
 options := vidio.Options{FPS: webcam.FPS()}
 
-writer := vidio.NewVideoWriter("output.mp4", webcam.width, webcam.height, &options)
+writer := vidio.NewVideoWriter("output.mp4", webcam.Width(), webcam.Height(), &options)
 defer writer.Close()
 
 count := 0

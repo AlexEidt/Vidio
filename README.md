@@ -57,8 +57,7 @@ defer camera.Close()
 
 // Stream the webcam
 for camera.Read() {
-	// "frame" stores the video frame as a flattened RGB image
-	frame := camera.FrameBuffer() // stored as: RGBRGBRGBRGB...
+	frame := camera.FrameBuffer()
 	// Video processing here...
 }
 ```
@@ -90,7 +89,7 @@ type Options struct {
 	FPS         float64         // Frames per second. Default 25
 	Quality     float64         // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst
 	Codec       string          // Codec for video. Default libx264
-	Audio       string          // File path for audio for the video. If no audio, audio=nil.
+	Audio       string          // File path for audio for the video. If no audio, audio="".
 	AudioCodec  string          // Codec for audio. Default aac
 }
 ```

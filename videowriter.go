@@ -37,7 +37,7 @@ type Options struct {
 	FPS        float64 // Frames per second for output video.
 	Quality    float64 // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst.
 	Codec      string  // Codec for video.
-	Audio      string  // File path for audio. If no audio, audio=nil.
+	Audio      string  // File path for audio. If no audio, audio="".
 	AudioCodec string  // Codec for audio.
 }
 

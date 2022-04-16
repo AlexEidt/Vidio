@@ -208,7 +208,7 @@ func (camera *Camera) Close() {
 // Stops the "cmd" process running when the user presses Ctrl+C.
 // https://stackoverflow.com/questions/11268943/is-it-possible-to-capture-a-ctrlc-signal-and-run-a-cleanup-function-in-a-defe.
 func (camera *Camera) cleanup() {
-	c := make(chan os.Signal)
+	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c

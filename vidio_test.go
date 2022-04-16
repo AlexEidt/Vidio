@@ -25,8 +25,8 @@ func TestVideoMetaData(t *testing.T) {
 	assertEquals(video.duration, 3.366667)
 	assertEquals(video.fps, float64(30))
 	assertEquals(video.codec, "h264")
-	assertEquals(video.audio_codec, "aac")
-	assertEquals(video.pix_fmt, "yuv420p")
+	assertEquals(video.audioCodec, "aac")
+	assertEquals(video.pixfmt, "yuv420p")
 	assertEquals(len(video.framebuffer), 0)
 
 	if video.pipe != nil {
@@ -63,17 +63,17 @@ func TestVideoWriting(t *testing.T) {
 	testWriting := func(input, output string, audio bool) {
 		video := NewVideo(input)
 		options := Options{
-			fps:     video.fps,
-			bitrate: video.bitrate,
-			codec:   video.codec,
+			FPS:     video.FPS(),
+			Bitrate: video.Bitrate(),
+			Codec:   video.Codec(),
 		}
 		if audio {
-			options.audio = input
+			options.Audio = input
 		}
 
 		writer := NewVideoWriter(output, video.width, video.height, &options)
 		for video.Read() {
-			writer.Write(video.framebuffer)
+			writer.Write(video.FrameBuffer())
 		}
 		writer.Close()
 
@@ -84,6 +84,30 @@ func TestVideoWriting(t *testing.T) {
 	fmt.Println("Video Writing (with Audio) Test Passed")
 	testWriting("test/koala-noaudio.mp4", "test/koala-noaudio-out.mp4", false)
 	fmt.Println("Video Writing (without Audio) Test Passed")
+}
+
+func TestCameraIO(t *testing.T) {
+	webcam := NewCamera(0)
+
+	options := Options{FPS: webcam.FPS()}
+
+	writer := NewVideoWriter("test/camera.mp4", webcam.width, webcam.height, &options)
+
+	count := 0
+	for webcam.Read() {
+		frame := webcam.FrameBuffer()
+		writer.Write(frame)
+		count++
+		if count > 100 {
+			break
+		}
+	}
+
+	webcam.Close()
+	writer.Close()
+
+	//os.Remove("test/camera.mp4")
+	fmt.Println("Camera IO Test Passed")
 }
 
 func TestFFprobe(t *testing.T) {

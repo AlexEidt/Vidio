@@ -3,6 +3,7 @@ package vidio
 import (
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -11,33 +12,77 @@ import (
 )
 
 type VideoWriter struct {
-	filename    string          // Output filename.
-	audio       string          // Audio filename.
-	width       int             // Frame width.
-	height      int             // Frame height.
-	bitrate     int             // Output video bitrate.
-	loop        int             // Number of times for GIF to loop.
-	delay       int             // Delay of final frame of GIF. Default -1 (same delay as previous frame).
-	macro       int             // Macroblock size for determining how to resize frames for codecs.
-	fps         float64         // Frames per second for output video. Default 25.
-	quality     float64         // Used if bitrate not given. Default 0.5.
-	codec       string          // Codec to encode video with. Default libx264.
-	audio_codec string          // Codec to encode audio with. Default aac.
-	pipe        *io.WriteCloser // Stdout pipe of ffmpeg process.
-	cmd         *exec.Cmd       // ffmpeg command.
+	filename   string          // Output filename.
+	audio      string          // Audio filename.
+	width      int             // Frame width.
+	height     int             // Frame height.
+	bitrate    int             // Output video bitrate.
+	loop       int             // Number of times for GIF to loop.
+	delay      int             // Delay of final frame of GIF. Default -1 (same delay as previous frame).
+	macro      int             // Macroblock size for determining how to resize frames for codecs.
+	fps        float64         // Frames per second for output video. Default 25.
+	quality    float64         // Used if bitrate not given. Default 0.5.
+	codec      string          // Codec to encode video with. Default libx264.
+	audioCodec string          // Codec to encode audio with. Default aac.
+	pipe       *io.WriteCloser // Stdout pipe of ffmpeg process.
+	cmd        *exec.Cmd       // ffmpeg command.
 }
 
 // Optional parameters for VideoWriter.
 type Options struct {
-	bitrate     int     // Bitrate.
-	loop        int     // For GIFs only. -1=no loop, 0=infinite loop, >0=number of loops.
-	delay       int     // Delay for final frame of GIFs.
-	macro       int     // Macroblock size for determining how to resize frames for codecs.
-	fps         float64 // Frames per second for output video.
-	quality     float64 // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst.
-	codec       string  // Codec for video.
-	audio       string  // File path for audio. If no audio, audio=nil.
-	audio_codec string  // Codec for audio.
+	Bitrate    int     // Bitrate.
+	Loop       int     // For GIFs only. -1=no loop, 0=infinite loop, >0=number of loops.
+	Delay      int     // Delay for final frame of GIFs.
+	Macro      int     // Macroblock size for determining how to resize frames for codecs.
+	FPS        float64 // Frames per second for output video.
+	Quality    float64 // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst.
+	Codec      string  // Codec for video.
+	Audio      string  // File path for audio. If no audio, audio=nil.
+	AudioCodec string  // Codec for audio.
+}
+
+func (writer *VideoWriter) FileName() string {
+	return writer.filename
+}
+
+func (writer *VideoWriter) Width() int {
+	return writer.width
+}
+
+func (writer *VideoWriter) Height() int {
+	return writer.height
+}
+
+func (writer *VideoWriter) Bitrate() int {
+	return writer.bitrate
+}
+
+func (writer *VideoWriter) Loop() int {
+	return writer.loop
+}
+
+func (writer *VideoWriter) Delay() int {
+	return writer.delay
+}
+
+func (writer *VideoWriter) Macro() int {
+	return writer.macro
+}
+
+func (writer *VideoWriter) FPS() float64 {
+	return writer.fps
+}
+
+func (writer *VideoWriter) Quality() float64 {
+	return writer.quality
+}
+
+func (writer *VideoWriter) Codec() string {
+	return writer.codec
+}
+
+func (writer *VideoWriter) AudioCodec() string {
+	return writer.audioCodec
 }
 
 // Creates a new VideoWriter struct with default values from the Options struct.
@@ -49,38 +94,38 @@ func NewVideoWriter(filename string, width, height int, options *Options) *Video
 
 	writer.width = width
 	writer.height = height
-	writer.bitrate = options.bitrate
+	writer.bitrate = options.Bitrate
 
 	// Default Parameter options logic from:
 	// https://github.com/imageio/imageio-ffmpeg/blob/master/imageio_ffmpeg/_io.py#L268.
 
 	// GIF settings
-	writer.loop = options.loop // Default to infinite loop.
-	if options.delay == 0 {
+	writer.loop = options.Loop // Default to infinite loop.
+	if options.Delay == 0 {
 		writer.delay = -1 // Default to frame delay of previous frame.
 	} else {
-		writer.delay = options.delay
+		writer.delay = options.Delay
 	}
 
-	if options.macro == 0 {
+	if options.Macro == 0 {
 		writer.macro = 16
 	} else {
-		writer.macro = options.macro
+		writer.macro = options.Macro
 	}
 
-	if options.fps == 0 {
+	if options.FPS == 0 {
 		writer.fps = 25
 	} else {
-		writer.fps = options.fps
+		writer.fps = options.FPS
 	}
 
-	if options.quality == 0 {
+	if options.Quality == 0 {
 		writer.quality = 0.5
 	} else {
-		writer.quality = options.quality
+		writer.quality = math.Max(0, math.Min(options.Quality, 1))
 	}
 
-	if options.codec == "" {
+	if options.Codec == "" {
 		if strings.HasSuffix(strings.ToLower(filename), ".wmv") {
 			writer.codec = "msmpeg4"
 		} else if strings.HasSuffix(strings.ToLower(filename), ".gif") {
@@ -89,24 +134,24 @@ func NewVideoWriter(filename string, width, height int, options *Options) *Video
 			writer.codec = "libx264"
 		}
 	} else {
-		writer.codec = options.codec
+		writer.codec = options.Codec
 	}
 
-	if options.audio != "" {
-		if !exists(options.audio) {
-			panic("Audio file " + options.audio + " does not exist.")
+	if options.Audio != "" {
+		if !exists(options.Audio) {
+			panic("Audio file " + options.Audio + " does not exist.")
 		}
 
-		if len(ffprobe(options.audio, "a")) == 0 {
-			panic("Given \"audio\" file " + options.audio + " has no audio.")
+		if len(ffprobe(options.Audio, "a")) == 0 {
+			panic("Given \"audio\" file " + options.Audio + " has no audio.")
 		}
 
-		writer.audio = options.audio
+		writer.audio = options.Audio
 
-		if options.audio_codec == "" {
-			writer.audio_codec = "aac"
+		if options.AudioCodec == "" {
+			writer.audioCodec = "aac"
 		} else {
-			writer.audio_codec = options.audio_codec
+			writer.audioCodec = options.AudioCodec
 		}
 	}
 
@@ -195,7 +240,7 @@ func initVideoWriter(writer *VideoWriter) {
 	if writer.audio != "" && !gif {
 		command = append(
 			command,
-			"-acodec", writer.audio_codec,
+			"-acodec", writer.audioCodec,
 			"-map", "0:v:0",
 			"-map", "1:a:0",
 		)

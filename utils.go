@@ -116,8 +116,8 @@ func addVideoData(data map[string]string, video *Video) {
 	if codec, ok := data["codec_name"]; ok {
 		video.codec = codec
 	}
-	if pix_fmt, ok := data["pix_fmt"]; ok {
-		video.pix_fmt = pix_fmt
+	if pixfmt, ok := data["pix_fmt"]; ok {
+		video.pixfmt = pixfmt
 	}
 }
 

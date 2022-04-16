@@ -15,29 +15,24 @@ go get github.com/AlexEidt/Vidio
 The `Video` struct stores data about a video file you give it. The code below shows an example of sequentially reading the frames of the given video.
 
 ```go
-type Video struct {
-	filename    string          // Video Filename
-	width       int             // Width of Frames
-	height      int             // Height of Frames
-	depth       int             // Depth of Frames
-	bitrate     int             // Bitrate for video encoding
-	frames      int             // Total number of frames
-	duration    float64         // Duration in seconds
-	fps         float64         // Frames per second
-	codec       string          // Codec used to encode video
-	audio_codec string          // Codec used for audio encoding
-	pix_fmt     string          // Pixel format video is stored in
-	framebuffer []byte          // Raw frame data
-	pipe        *io.ReadCloser  // Stdout pipe for ffmpeg process
-	cmd         *exec.Cmd       // ffmpeg command
-}
+FileName() string
+Width() int
+Height() int
+Depth() int
+Bitrate() int
+Frames() int
+Duration() float64
+FPS() float64
+Codec() string
+AudioCodec() string
+FrameBuffer() string
 ```
 
 ```go
 video := vidio.NewVideo("input.mp4")
 for video.Read() {
-	// "frame" stores the video frame as a flattened RGB image
-	frame := video.framebuffer // stored as: RGBRGBRGBRGB...
+	// "frame" stores the video frame as a flattened RGB image in row-major order
+	frame := video.FrameBuffer() // stored as: RGBRGBRGBRGB...
 	// Video processing here...
 }
 ```
@@ -47,17 +42,13 @@ for video.Read() {
 The `Camera` can read from any cameras on the device running Vidio. It takes in the stream index. On most machines the webcam device has index 0. Note that audio retrieval from the microphone is not yet supported.
 
 ```go
-type Camera struct {
-	name        string          // Camera device name
-	width       int             // Camera frame width
-	height      int             // Camera frame height
-	depth       int             // Camera frame depth
-	fps         float64         // Camera frames per second
-	codec       string          // Camera codec
-	framebuffer []byte          // Raw frame data
-	pipe        *io.ReadCloser  // Stdout pipe for ffmpeg process streaming webcam
-	cmd         *exec.Cmd       // ffmpeg command
-}
+Name() string
+Width() int
+Height() int
+Depth() int
+FPS() float64
+Codec() string
+FrameBuffer() string
 ```
 
 ```go
@@ -67,7 +58,7 @@ defer camera.Close()
 // Stream the webcam
 for camera.Read() {
 	// "frame" stores the video frame as a flattened RGB image
-	frame := camera.framebuffer // stored as: RGBRGBRGBRGB...
+	frame := camera.FrameBuffer() // stored as: RGBRGBRGBRGB...
 	// Video processing here...
 }
 ```
@@ -77,35 +68,30 @@ for camera.Read() {
 The `VideoWriter` is used to write frames to a video file. The only required parameters are the output file name, the width and height of the frames being written, and an `Options` struct. This contains all the desired properties of the new video you want to create.
 
 ```go
-type Options struct {
-	bitrate     int             // Bitrate
-	loop        int             // For GIFs only. -1=no loop, 0=loop forever, >0=loop n times
-	delay       int             // Delay for Final Frame of GIFs. Default -1 (Use same delay as previous frame)
-	macro       int             // macro size for determining how to resize frames for codecs. Default 16
-	fps         float64         // Frames per second. Default 25
-	quality     float64         // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst
-	codec       string          // Codec for video. Default libx264
-	audio       string          // File path for audio for the video. If no audio, audio=nil.
-	audio_codec string          // Codec for audio. Default aac
-}
+FileName() string
+Width() int
+Height() int
+Bitrate() int
+Loop() int
+Delay() int
+Macro() int
+FPS() float64
+Quality() float64
+Codec() string
+AudioCodec() string
 ```
 
 ```go
-type VideoWriter struct {
-	filename    string          // Output filename
-	audio       string          // Audio filename
-	width       int             // Frame width
-	height      int             // Frame height
-	bitrate     int             // Output video bitrate
-	loop        int             // Number of times for GIF to loop
-	delay       int             // Delay of final frame of GIF. Default -1 (same delay as previous frame)
-	macro       int             // Macroblock size for determining how to resize frames for codecs
-	fps         float64         // Frames per second for output video. Default 25
-	quality     float64         // Used if bitrate not given. Default 0.5
-	codec       string          // Codec to encode video with. Default libx264
-	audio_codec string          // Codec to encode audio with. Default aac
-	pipe        *io.WriteCloser // Stdout pipe of ffmpeg process
-	cmd         *exec.Cmd       // ffmpeg command
+type Options struct {
+	Bitrate     int             // Bitrate
+	Loop        int             // For GIFs only. -1=no loop, 0=loop forever, >0=loop n times
+	Delay       int             // Delay for Final Frame of GIFs. Default -1 (Use same delay as previous frame)
+	Macro       int             // macro size for determining how to resize frames for codecs. Default 16
+	FPS         float64         // Frames per second. Default 25
+	Quality     float64         // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst
+	Codec       string          // Codec for video. Default libx264
+	Audio       string          // File path for audio for the video. If no audio, audio=nil.
+	AudioCodec  string          // Codec for audio. Default aac
 }
 ```
 
@@ -142,16 +128,16 @@ Copy `input.mp4` to `output.mp4`. Copy the audio from `input.mp4` to `output.mp4
 ```go
 video := vidio.NewVideo("input.mp4")
 options := vidio.Options{
-	fps: video.fps,
-	bitrate: video.bitrate,
-	audio: "input.mp4",
+	FPS: video.FPS(),
+	Bitrate: video.Bitrate(),
+	Audio: "input.mp4",
 }
 
 writer := vidio.NewVideoWriter("output.mp4", video.width, video.height, &options)
 defer writer.Close()
 
 for video.Read() {
-    writer.Write(video.framebuffer)
+    writer.Write(video.FrameBuffer())
 }
 ```
 
@@ -161,22 +147,23 @@ Grayscale 1000 frames of webcam stream and store in `output.mp4`.
 webcam := vidio.NewCamera(0)
 defer webcam.Close()
 
-options := vidio.Options{fps: webcam.fps}
+options := vidio.Options{FPS: webcam.FPS()}
 
 writer := vidio.NewVideoWriter("output.mp4", webcam.width, webcam.height, &options)
 defer writer.Close()
 
 count := 0
 for webcam.Read() {
-	for i := 0; i < len(webcam.framebuffer); i += 3 {
-		rgb := webcam.framebuffer[i : i+3]
+	frame := webcam.FrameBuffer()
+	for i := 0; i < len(frame); i += 3 {
+		rgb := frame[i : i+3]
 		r, g, b := int(rgb[0]), int(rgb[1]), int(rgb[2])
 		gray := uint8((3*r + 4*g + b) / 8)
-		webcam.framebuffer[i] = gray
-		webcam.framebuffer[i+1] = gray
-		webcam.framebuffer[i+2] = gray
+		frame[i] = gray
+		frame[i+1] = gray
+		frame[i+2] = gray
 	}
-	writer.Write(webcam.framebuffer)
+	writer.Write(frame)
 	count++
 	if count > 1000 {
 		break
@@ -189,7 +176,7 @@ Create a gif from a series of `png` files enumerated from 1 to 10 that loops con
 ```go
 w, h, _ := vidio.Read("1.png") // Get frame dimensions from first image
 
-options := vidio.Options{fps: 1, loop: -1, delay: 1000}
+options := vidio.Options{FPS: 1, Loop: -1, Delay: 1000}
 
 gif := vidio.NewVideoWriter("output.gif", w, h, &options)
 defer gif.Close()

@@ -18,11 +18,58 @@ type Video struct {
 	duration    float64        // Duration of video in seconds.
 	fps         float64        // Frames per second.
 	codec       string         // Codec used for video encoding.
-	audio_codec string         // Codec used for audio encoding.
-	pix_fmt     string         // Pixel format video is stored in.
+	audioCodec  string         // Codec used for audio encoding.
+	pixfmt      string         // Pixel format video is stored in.
 	framebuffer []byte         // Raw frame data.
 	pipe        *io.ReadCloser // Stdout pipe for ffmpeg process.
 	cmd         *exec.Cmd      // ffmpeg command.
+}
+
+func (video *Video) FileName() string {
+	return video.filename
+}
+
+func (video *Video) Width() int {
+	return video.width
+}
+
+func (video *Video) Height() int {
+	return video.height
+}
+
+// Channels of video frames.
+func (video *Video) Depth() int {
+	return video.depth
+}
+
+// Bitrate of video.
+func (video *Video) Bitrate() int {
+	return video.bitrate
+}
+
+// Total number of frames in video.
+func (video *Video) Frames() int {
+	return video.frames
+}
+
+func (video *Video) Duration() float64 {
+	return video.duration
+}
+
+func (video *Video) FPS() float64 {
+	return video.fps
+}
+
+func (video *Video) Codec() string {
+	return video.codec
+}
+
+func (video *Video) AudioCodec() string {
+	return video.audioCodec
+}
+
+func (video *Video) FrameBuffer() []byte {
+	return video.framebuffer
 }
 
 // Creates a new Video struct.
@@ -41,8 +88,8 @@ func NewVideo(filename string) *Video {
 	video := &Video{filename: filename, depth: 3}
 
 	addVideoData(videoData, video)
-	if audio_codec, ok := audioData["codec_name"]; ok {
-		video.audio_codec = audio_codec
+	if audioCodec, ok := audioData["codec_name"]; ok {
+		video.audioCodec = audioCodec
 	}
 
 	return video

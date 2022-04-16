@@ -22,6 +22,34 @@ type Camera struct {
 	cmd         *exec.Cmd      // ffmpeg command.
 }
 
+func (camera *Camera) Name() string {
+	return camera.name
+}
+
+func (camera *Camera) Width() int {
+	return camera.width
+}
+
+func (camera *Camera) Height() int {
+	return camera.height
+}
+
+func (camera *Camera) Depth() int {
+	return camera.depth
+}
+
+func (camera *Camera) FPS() float64 {
+	return camera.fps
+}
+
+func (camera *Camera) Codec() string {
+	return camera.codec
+}
+
+func (camera *Camera) FrameBuffer() []byte {
+	return camera.framebuffer
+}
+
 // Returns the webcam device name.
 // On windows, ffmpeg output from the -list_devices command is parsed to find the device name.
 func getDevicesWindows() []string {

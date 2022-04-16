@@ -176,7 +176,7 @@ Create a gif from a series of `png` files enumerated from 1 to 10 that loops con
 ```go
 w, h, _ := vidio.Read("1.png") // Get frame dimensions from first image
 
-options := vidio.Options{FPS: 1, Loop: -1, Delay: 1000}
+options := vidio.Options{FPS: 1, Loop: 0, Delay: 1000}
 
 gif := vidio.NewVideoWriter("output.gif", w, h, &options)
 defer gif.Close()

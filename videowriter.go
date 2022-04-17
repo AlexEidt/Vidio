@@ -1,6 +1,7 @@
 package vidio
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -86,9 +87,11 @@ func (writer *VideoWriter) AudioCodec() string {
 }
 
 // Creates a new VideoWriter struct with default values from the Options struct.
-func NewVideoWriter(filename string, width, height int, options *Options) *VideoWriter {
+func NewVideoWriter(filename string, width, height int, options *Options) (*VideoWriter, error) {
 	// Check if ffmpeg is installed on the users machine.
-	checkExists("ffmpeg")
+	if err := checkExists("ffmpeg"); err != nil {
+		return nil, err
+	}
 
 	writer := VideoWriter{filename: filename}
 
@@ -139,11 +142,14 @@ func NewVideoWriter(filename string, width, height int, options *Options) *Video
 
 	if options.Audio != "" {
 		if !exists(options.Audio) {
-			panic("Audio file " + options.Audio + " does not exist.")
+			return nil, errors.New("Audio file " + options.Audio + " does not exist.")
 		}
 
-		if len(ffprobe(options.Audio, "a")) == 0 {
-			panic("Given \"audio\" file " + options.Audio + " has no audio.")
+		audioData, err := ffprobe(options.Audio, "a")
+		if err != nil {
+			return nil, err
+		} else if len(audioData) == 0 {
+			return nil, errors.New("Given \"audio\" file " + options.Audio + " has no audio.")
 		}
 
 		writer.audio = options.Audio
@@ -155,12 +161,12 @@ func NewVideoWriter(filename string, width, height int, options *Options) *Video
 		}
 	}
 
-	return &writer
+	return &writer, nil
 }
 
 // Once the user calls Write() for the first time on a VideoWriter struct,
 // the ffmpeg command which is used to write to the video file is started.
-func initVideoWriter(writer *VideoWriter) {
+func initVideoWriter(writer *VideoWriter) error {
 	// If user exits with Ctrl+C, stop ffmpeg process.
 	writer.cleanup()
 	// ffmpeg command to write to video file. Takes in bytes from Stdin and encodes them.
@@ -252,29 +258,35 @@ func initVideoWriter(writer *VideoWriter) {
 
 	pipe, err := cmd.StdinPipe()
 	if err != nil {
-		panic(err)
+		pipe.Close()
+		return err
 	}
 	writer.pipe = &pipe
 	if err := cmd.Start(); err != nil {
-		panic(err)
+		cmd.Process.Kill()
+		return err
 	}
+
+	return nil
 }
 
 // Writes the given frame to the video file.
-func (writer *VideoWriter) Write(frame []byte) {
+func (writer *VideoWriter) Write(frame []byte) error {
 	// If cmd is nil, video writing has not been set up.
 	if writer.cmd == nil {
-		initVideoWriter(writer)
+		if err := initVideoWriter(writer); err != nil {
+			return err
+		}
 	}
 	total := 0
 	for total < len(frame) {
 		n, err := (*writer.pipe).Write(frame[total:])
 		if err != nil {
-			fmt.Println("Likely cause is invalid parameters to ffmpeg.")
-			panic(err)
+			return err
 		}
 		total += n
 	}
+	return nil
 }
 
 // Closes the pipe and stops the ffmpeg process.

@@ -13,15 +13,15 @@ import (
 )
 
 // Reads an image from a file. Currently only supports png and jpeg.
-func Read(filename string) (int, int, []byte) {
+func Read(filename string) (int, int, []byte, error) {
 	f, err := os.Open(filename)
 	if err != nil {
-		panic(err)
+		return 0, 0, nil, err
 	}
 	defer f.Close()
 	image, _, err := image.Decode(f)
 	if err != nil {
-		panic(err)
+		return 0, 0, nil, err
 	}
 	bounds := image.Bounds().Max
 	data := make([]byte, bounds.Y*bounds.X*3)
@@ -38,14 +38,14 @@ func Read(filename string) (int, int, []byte) {
 			index++
 		}
 	}
-	return bounds.X, bounds.Y, data
+	return bounds.X, bounds.Y, data, nil
 }
 
 // Writes an image to a file. Currently only supports png and jpeg.
-func Write(filename string, width, height int, data []byte) {
+func Write(filename string, width, height int, data []byte) error {
 	f, err := os.Create(filename)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer f.Close()
 	image := image.NewRGBA(image.Rect(0, 0, width, height))
@@ -59,11 +59,12 @@ func Write(filename string, width, height int, data []byte) {
 	}
 	if strings.HasSuffix(filename, ".png") {
 		if err := png.Encode(f, image); err != nil {
-			panic(err)
+			return err
 		}
 	} else if strings.HasSuffix(filename, ".jpg") || strings.HasSuffix(filename, ".jpeg") {
 		if err := jpeg.Encode(f, image, nil); err != nil {
-			panic(err)
+			return err
 		}
 	}
+	return nil
 }

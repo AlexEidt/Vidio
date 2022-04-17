@@ -25,18 +25,21 @@ func exists(filename string) bool {
 }
 
 // Checks if the given program is installed.
-func checkExists(program string) {
+func checkExists(program string) error {
 	cmd := exec.Command(program, "-version")
 	if err := cmd.Start(); err != nil {
-		panic(program + " is not installed.")
+		cmd.Process.Kill()
+		return errors.New(program + " is not installed.")
 	}
 	if err := cmd.Wait(); err != nil {
-		panic(program + " is not installed.")
+		cmd.Process.Kill()
+		return errors.New(program + " is not installed.")
 	}
+	return nil
 }
 
 // Runs ffprobe on the given file and returns a map of the metadata.
-func ffprobe(filename, stype string) map[string]string {
+func ffprobe(filename, stype string) (map[string]string, error) {
 	// "stype" is stream stype. "v" for video, "a" for audio.
 	// Extract video information with ffprobe.
 	cmd := exec.Command(
@@ -50,11 +53,13 @@ func ffprobe(filename, stype string) map[string]string {
 
 	pipe, err := cmd.StdoutPipe()
 	if err != nil {
-		panic(err)
+		pipe.Close()
+		return nil, err
 	}
 
 	if err := cmd.Start(); err != nil {
-		panic(err)
+		cmd.Process.Kill()
+		return nil, err
 	}
 	// Read ffprobe output from Stdout.
 	buffer := make([]byte, 2<<10)
@@ -68,10 +73,11 @@ func ffprobe(filename, stype string) map[string]string {
 	}
 	// Wait for ffprobe command to complete.
 	if err := cmd.Wait(); err != nil {
-		panic(err)
+		cmd.Process.Kill()
+		return nil, err
 	}
 
-	return parseFFprobe(buffer[:total])
+	return parseFFprobe(buffer[:total]), nil
 }
 
 // Parse ffprobe output to fill in video data.
@@ -131,17 +137,17 @@ func parse(data string) float64 {
 }
 
 // Returns the webcam name used for the -f option with ffmpeg.
-func webcam() string {
+func webcam() (string, error) {
 	os := runtime.GOOS
 	switch os {
 	case "linux":
-		return "v4l2"
+		return "v4l2", nil
 	case "darwin":
-		return "avfoundation" // qtkit
+		return "avfoundation", nil // qtkit
 	case "windows":
-		return "dshow" // vfwcap
+		return "dshow", nil // vfwcap
 	default:
-		panic("Unsupported OS: " + os)
+		return "", errors.New("Unsupported OS: " + os)
 	}
 }
 

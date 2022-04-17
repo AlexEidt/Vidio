@@ -13,7 +13,10 @@ func assertEquals(expected, actual interface{}) {
 }
 
 func TestVideoMetaData(t *testing.T) {
-	video := NewVideo("test/koala.mp4")
+	video, err := NewVideo("test/koala.mp4")
+	if err != nil {
+		panic(err)
+	}
 	defer video.Close()
 
 	assertEquals(video.filename, "test/koala.mp4")
@@ -40,7 +43,10 @@ func TestVideoMetaData(t *testing.T) {
 }
 
 func TestVideoFrame(t *testing.T) {
-	video := NewVideo("test/koala.mp4")
+	video, err := NewVideo("test/koala.mp4")
+	if err != nil {
+		panic(err)
+	}
 	defer video.Close()
 
 	video.Read()
@@ -61,7 +67,10 @@ func TestVideoFrame(t *testing.T) {
 
 func TestVideoWriting(t *testing.T) {
 	testWriting := func(input, output string, audio bool) {
-		video := NewVideo(input)
+		video, err := NewVideo(input)
+		if err != nil {
+			panic(err)
+		}
 		options := Options{
 			FPS:     video.FPS(),
 			Bitrate: video.Bitrate(),
@@ -71,9 +80,15 @@ func TestVideoWriting(t *testing.T) {
 			options.Audio = input
 		}
 
-		writer := NewVideoWriter(output, video.width, video.height, &options)
+		writer, err := NewVideoWriter(output, video.width, video.height, &options)
+		if err != nil {
+			panic(err)
+		}
 		for video.Read() {
-			writer.Write(video.FrameBuffer())
+			err := writer.Write(video.FrameBuffer())
+			if err != nil {
+				panic(err)
+			}
 		}
 		writer.Close()
 
@@ -87,11 +102,17 @@ func TestVideoWriting(t *testing.T) {
 }
 
 func TestCameraIO(t *testing.T) {
-	webcam := NewCamera(0)
+	webcam, err := NewCamera(0)
+	if err != nil {
+		panic(err)
+	}
 
 	options := Options{FPS: webcam.FPS()}
 
-	writer := NewVideoWriter("test/camera.mp4", webcam.width, webcam.height, &options)
+	writer, err := NewVideoWriter("test/camera.mp4", webcam.width, webcam.height, &options)
+	if err != nil {
+		panic(err)
+	}
 
 	count := 0
 	for webcam.Read() {
@@ -104,7 +125,10 @@ func TestCameraIO(t *testing.T) {
 			frame[i+1] = gray
 			frame[i+2] = gray
 		}
-		writer.Write(frame)
+		err := writer.Write(frame)
+		if err != nil {
+			panic(err)
+		}
 		count++
 		if count > 100 {
 			break
@@ -119,22 +143,34 @@ func TestCameraIO(t *testing.T) {
 }
 
 func TestFFprobe(t *testing.T) {
-	koalaVideo := ffprobe("test/koala.mp4", "v")
+	koalaVideo, err := ffprobe("test/koala.mp4", "v")
+	if err != nil {
+		panic(err)
+	}
 	assertEquals(koalaVideo["width"], "480")
 	assertEquals(koalaVideo["height"], "270")
 	assertEquals(koalaVideo["duration"], "3.366667")
 	assertEquals(koalaVideo["bit_rate"], "170549")
 	assertEquals(koalaVideo["codec_name"], "h264")
-	koalaAudio := ffprobe("test/koala.mp4", "a")
+	koalaAudio, err := ffprobe("test/koala.mp4", "a")
+	if err != nil {
+		panic(err)
+	}
 	assertEquals(koalaAudio["codec_name"], "aac")
 
-	koalaVideo = ffprobe("test/koala-noaudio.mp4", "v")
+	koalaVideo, err = ffprobe("test/koala-noaudio.mp4", "v")
+	if err != nil {
+		panic(err)
+	}
 	assertEquals(koalaVideo["width"], "480")
 	assertEquals(koalaVideo["height"], "270")
 	assertEquals(koalaVideo["duration"], "3.366667")
 	assertEquals(koalaVideo["bit_rate"], "170549")
 	assertEquals(koalaVideo["codec_name"], "h264")
-	koalaAudio = ffprobe("test/koala-noaudio.mp4", "a")
+	koalaAudio, err = ffprobe("test/koala-noaudio.mp4", "a")
+	if err != nil {
+		panic(err)
+	}
 	assertEquals(len(koalaAudio), 0)
 
 	fmt.Println("FFprobe Test Passed")
@@ -171,13 +207,17 @@ dummy: Immediate exit requested`,
 
 func TestWebcamParsing(t *testing.T) {
 	camera := &Camera{}
-	getCameraData(
+	err := getCameraData(
 		`Input #0, dshow, from 'video=Integrated Camera':
   Duration: N/A, start: 1367309.442000, bitrate: N/A
   Stream #0:0: Video: mjpeg (Baseline) (MJPG / 0x47504A4D), yuvj422p(pc, bt470bg/unknown/unknown), 1280x720, 30 fps, 30 tbr, 10000k tbn
 At least one output file must be specified`,
 		camera,
 	)
+
+	if err != nil {
+		panic(err)
+	}
 
 	assertEquals(camera.width, 1280)
 	assertEquals(camera.height, 720)

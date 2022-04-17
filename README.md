@@ -15,6 +15,8 @@ go get github.com/AlexEidt/Vidio
 The `Video` struct stores data about a video file you give it. The code below shows an example of sequentially reading the frames of the given video.
 
 ```go
+vidio.NewVideo() (*Video, error) // Create a new Video struct
+
 FileName() string
 Width() int
 Height() int
@@ -26,15 +28,21 @@ FPS() float64
 Codec() string
 AudioCodec() string
 FrameBuffer() []byte
+
+Read() bool // Read a frame of video and store it in the frame buffer
+Close()
 ```
 
 ```go
-video := vidio.NewVideo("input.mp4")
+video, err := vidio.NewVideo("input.mp4")
+// Error handling...
 for video.Read() {
 	// "frame" stores the video frame as a flattened RGB image in row-major order
 	frame := video.FrameBuffer() // stored as: RGBRGBRGBRGB...
 	// Video processing here...
 }
+// If all frames have been read, "video" will be closed automatically.
+// If not all frames are read, call "video.Close()" to close the video.
 ```
 
 ## `Camera`
@@ -42,6 +50,8 @@ for video.Read() {
 The `Camera` can read from any cameras on the device running Vidio. It takes in the stream index. On most machines the webcam device has index 0. Note that audio retrieval from the microphone is not yet supported.
 
 ```go
+vidio.NewCamera(stream int) (*Camera, error) // Create a new Camera struct
+
 Name() string
 Width() int
 Height() int
@@ -49,10 +59,14 @@ Depth() int
 FPS() float64
 Codec() string
 FrameBuffer() []byte
+
+Read() bool // Read a frame of video and store it in the frame buffer
+Close()
 ```
 
 ```go
-camera := vidio.NewCamera(0) // Get Webcam
+camera, err := vidio.NewCamera(0) // Get Webcam
+// Error handling...
 defer camera.Close()
 
 // Stream the webcam
@@ -67,6 +81,8 @@ for camera.Read() {
 The `VideoWriter` is used to write frames to a video file. The only required parameters are the output file name, the width and height of the frames being written, and an `Options` struct. This contains all the desired properties of the new video you want to create.
 
 ```go
+vidio.NewVideoWriter() (*VideoWriter, error) // Create a new VideoWriter struct
+
 FileName() string
 Width() int
 Height() int
@@ -78,6 +94,9 @@ FPS() float64
 Quality() float64
 Codec() string
 AudioCodec() string
+
+Write(frame []byte) error // Write a frame to the video file
+Close()
 ```
 
 ```go
@@ -89,7 +108,7 @@ type Options struct {
 	FPS         float64         // Frames per second. Default 25
 	Quality     float64         // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst
 	Codec       string          // Codec for video. Default libx264
-	Audio       string          // File path for audio for the video. If no audio, audio="".
+	Audio       string          // File path for audio for the video. If no audio, audio=""
 	AudioCodec  string          // Codec for audio. Default aac
 }
 ```
@@ -98,11 +117,13 @@ type Options struct {
 w, h, c := 1920, 1080, 3
 options := vidio.Options{} // Will fill in defaults if empty
 
-writer := vidio.NewVideoWriter("output.mp4", w, h, &options)
+writer, err := vidio.NewVideoWriter("output.mp4", w, h, &options)
+// Error handling...
 defer writer.Close()
 
 frame := make([]byte, w*h*c) // Create Frame as RGB Image and modify
-writer.Write(frame) // Write Frame to video
+err := writer.Write(frame) // Write Frame to video
+// Error handling...
 ```
 
 ## Images
@@ -111,13 +132,15 @@ Vidio provides some convenience functions for reading and writing to images usin
 
 ```go
 // Read png image
-w, h, img := vidio.Read("input.png")
+w, h, img, err := vidio.Read("input.png")
+// Error handling...
 
 // w - width of image
 // h - height of image
 // img - byte array in RGB format. RGBRGBRGBRGB...
 
-vidio.Write("output.jpg", w, h, img)
+err := vidio.Write("output.jpg", w, h, img)
+// Error handling...
 ```
 
 ## Examples
@@ -125,30 +148,35 @@ vidio.Write("output.jpg", w, h, img)
 Copy `input.mp4` to `output.mp4`. Copy the audio from `input.mp4` to `output.mp4` as well.
 
 ```go
-video := vidio.NewVideo("input.mp4")
+video, err := vidio.NewVideo("input.mp4")
+// Error handling...
 options := vidio.Options{
 	FPS: video.FPS(),
 	Bitrate: video.Bitrate(),
 	Audio: "input.mp4",
 }
 
-writer := vidio.NewVideoWriter("output.mp4", video.Width(), video.Height(), &options)
+writer, err := vidio.NewVideoWriter("output.mp4", video.Width(), video.Height(), &options)
+// Error handling...
 defer writer.Close()
 
 for video.Read() {
-    writer.Write(video.FrameBuffer())
+    err := writer.Write(video.FrameBuffer())
+	// Error handling...
 }
 ```
 
 Grayscale 1000 frames of webcam stream and store in `output.mp4`.
 
 ```go
-webcam := vidio.NewCamera(0)
+webcam, err := vidio.NewCamera(0)
+// Error handling...
 defer webcam.Close()
 
 options := vidio.Options{FPS: webcam.FPS()}
 
-writer := vidio.NewVideoWriter("output.mp4", webcam.Width(), webcam.Height(), &options)
+writer, err := vidio.NewVideoWriter("output.mp4", webcam.Width(), webcam.Height(), &options)
+// Error handling...
 defer writer.Close()
 
 count := 0
@@ -162,7 +190,8 @@ for webcam.Read() {
 		frame[i+1] = gray
 		frame[i+2] = gray
 	}
-	writer.Write(frame)
+	err := writer.Write(frame)
+	// Error handling...
 	count++
 	if count > 1000 {
 		break
@@ -173,16 +202,20 @@ for webcam.Read() {
 Create a gif from a series of `png` files enumerated from 1 to 10 that loops continuously with a final frame delay of 1000 centiseconds.
 
 ```go
-w, h, _ := vidio.Read("1.png") // Get frame dimensions from first image
+w, h, _, err := vidio.Read("1.png") // Get frame dimensions from first image
+// Error handling...
 
 options := vidio.Options{FPS: 1, Loop: 0, Delay: 1000}
 
-gif := vidio.NewVideoWriter("output.gif", w, h, &options)
+gif, err := vidio.NewVideoWriter("output.gif", w, h, &options)
+// Error handling...
 defer gif.Close()
 
 for i := 1; i <= 10; i++ {
-	_, _, img := vidio.Read(strconv.Itoa(i)+".png")
-	gif.Write(img)
+	_, _, img, err := vidio.Read(strconv.Itoa(i)+".png")
+	// Error handling...
+	err := gif.Write(img)
+	// Error handling...
 }
 ```
 

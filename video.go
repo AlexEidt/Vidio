@@ -1,6 +1,7 @@
 package vidio
 
 import (
+	"errors"
 	"io"
 	"os"
 	"os/exec"
@@ -74,16 +75,26 @@ func (video *Video) FrameBuffer() []byte {
 
 // Creates a new Video struct.
 // Uses ffprobe to get video information and fills in the Video struct with this data.
-func NewVideo(filename string) *Video {
+func NewVideo(filename string) (*Video, error) {
 	if !exists(filename) {
-		panic("Video file " + filename + " does not exist")
+		return nil, errors.New("Video file " + filename + " does not exist")
 	}
 	// Check if ffmpeg and ffprobe are installed on the users machine.
-	checkExists("ffmpeg")
-	checkExists("ffprobe")
+	if err := checkExists("ffmpeg"); err != nil {
+		return nil, err
+	}
+	if err := checkExists("ffprobe"); err != nil {
+		return nil, err
+	}
 
-	videoData := ffprobe(filename, "v")
-	audioData := ffprobe(filename, "a")
+	videoData, err := ffprobe(filename, "v")
+	if err != nil {
+		return nil, err
+	}
+	audioData, err := ffprobe(filename, "a")
+	if err != nil {
+		return nil, err
+	}
 
 	video := &Video{filename: filename, depth: 3}
 
@@ -92,12 +103,12 @@ func NewVideo(filename string) *Video {
 		video.audioCodec = audioCodec
 	}
 
-	return video
+	return video, nil
 }
 
 // Once the user calls Read() for the first time on a Video struct,
 // the ffmpeg command which is used to read the video is started.
-func initVideo(video *Video) {
+func initVideo(video *Video) error {
 	// If user exits with Ctrl+C, stop ffmpeg process.
 	video.cleanup()
 	// ffmpeg command to pipe video data to stdout in 8-bit RGB format.
@@ -113,13 +124,17 @@ func initVideo(video *Video) {
 	video.cmd = cmd
 	pipe, err := cmd.StdoutPipe()
 	if err != nil {
-		panic(err)
+		pipe.Close()
+		return err
 	}
 	video.pipe = &pipe
 	if err := cmd.Start(); err != nil {
-		panic(err)
+		cmd.Process.Kill()
+		return err
 	}
+
 	video.framebuffer = make([]byte, video.width*video.height*video.depth)
+	return nil
 }
 
 // Reads the next frame from the video and stores in the framebuffer.
@@ -127,7 +142,9 @@ func initVideo(video *Video) {
 func (video *Video) Read() bool {
 	// If cmd is nil, video reading has not been initialized.
 	if video.cmd == nil {
-		initVideo(video)
+		if err := initVideo(video); err != nil {
+			return false
+		}
 	}
 	total := 0
 	for total < video.width*video.height*video.depth {

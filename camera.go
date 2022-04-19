@@ -51,6 +51,12 @@ func (camera *Camera) FrameBuffer() []byte {
 	return camera.framebuffer
 }
 
+// Sets the framebuffer to the given byte array. Note that "buffer" must be large enough
+// to store one frame of video data which is width*height*3.
+func (camera *Camera) SetFrameBuffer(buffer []byte) {
+	camera.framebuffer = buffer
+}
+
 // Returns the webcam device name.
 // On windows, ffmpeg output from the -list_devices command is parsed to find the device name.
 func getDevicesWindows() ([]string, error) {

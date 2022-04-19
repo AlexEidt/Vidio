@@ -73,6 +73,12 @@ func (video *Video) FrameBuffer() []byte {
 	return video.framebuffer
 }
 
+// Sets the framebuffer to the given byte array. Note that "buffer" must be large enough
+// to store one frame of video data which is width*height*3.
+func (video *Video) SetFrameBuffer(buffer []byte) {
+	video.framebuffer = buffer
+}
+
 // Creates a new Video struct.
 // Uses ffprobe to get video information and fills in the Video struct with this data.
 func NewVideo(filename string) (*Video, error) {

@@ -1,6 +1,8 @@
 package vidio
 
 import (
+	"errors"
+	"fmt"
 	"image"
 	"os"
 	"strings"
@@ -13,7 +15,7 @@ import (
 )
 
 // Reads an image from a file. Currently only supports png and jpeg.
-func Read(filename string) (int, int, []byte, error) {
+func Read(filename string, buffer ...[]byte) (int, int, []byte, error) {
 	f, err := os.Open(filename)
 	if err != nil {
 		return 0, 0, nil, err
@@ -28,7 +30,16 @@ func Read(filename string) (int, int, []byte, error) {
 	bounds := image.Bounds().Max
 	size := bounds.X * bounds.Y * 3
 
-	data := make([]byte, size)
+	var data []byte
+	if len(buffer) > 0 {
+		if len(buffer[0]) < size {
+			errmsg := fmt.Sprintf("Buffer size (%d) is smaller than image size (%d)", len(buffer[0]), size)
+			return 0, 0, nil, errors.New(errmsg)
+		}
+		data = buffer[0]
+	} else {
+		data = make([]byte, size, size)
+	}
 
 	index := 0
 	for h := 0; h < bounds.Y; h++ {
@@ -47,17 +58,18 @@ func Read(filename string) (int, int, []byte, error) {
 }
 
 // Writes an image to a file. Currently only supports png and jpeg.
-func Write(filename string, width, height int, data []byte) error {
+func Write(filename string, width, height int, buffer []byte) error {
 	f, err := os.Create(filename)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
+
 	image := image.NewRGBA(image.Rect(0, 0, width, height))
 	index := 0
 	for h := 0; h < height; h++ {
 		for w := 0; w < width; w++ {
-			r, g, b := data[index], data[index+1], data[index+2]
+			r, g, b := buffer[index], buffer[index+1], buffer[index+2]
 			image.Set(w, h, color.RGBA{r, g, b, 255})
 			index += 3
 		}

@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func assertEquals(expected, actual interface{}) {
+func assertEquals(actual, expected interface{}) {
 	if expected != actual {
 		panic(fmt.Sprintf("Expected %v, got %v", expected, actual))
 	}
@@ -225,4 +225,43 @@ At least one output file must be specified`,
 	assertEquals(camera.codec, "mjpeg")
 
 	fmt.Println("Webcam Parsing Test Passed")
+}
+
+func TestImageRead(t *testing.T) {
+	w, h, img, err := Read("test/bananas.jpg")
+	if err != nil {
+		panic(err)
+	}
+
+	assertEquals(w, 200)
+	assertEquals(h, 133)
+	assertEquals(len(img), 200*133*3)
+	// [255 221 189 255 221 189 255 222 186 255]
+	assertEquals(img[0], uint8(255))
+	assertEquals(img[1], uint8(221))
+	assertEquals(img[2], uint8(189))
+	assertEquals(img[3], uint8(255))
+	assertEquals(img[4], uint8(221))
+	assertEquals(img[5], uint8(189))
+	assertEquals(img[6], uint8(255))
+	assertEquals(img[7], uint8(222))
+	assertEquals(img[8], uint8(186))
+	assertEquals(img[9], uint8(255))
+
+	fmt.Println("Image Reading Test Passed")
+}
+
+func TestImageWrite(t *testing.T) {
+	w, h, img, err := Read("test/bananas.jpg")
+	if err != nil {
+		panic(err)
+	}
+	err = Write("test/bananas-out.png", w, h, img)
+	if err != nil {
+		panic(err)
+	}
+
+	os.Remove("test/bananas-out.png")
+
+	fmt.Println("Image Writing Test Passed")
 }

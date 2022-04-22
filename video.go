@@ -69,6 +69,10 @@ func (video *Video) AudioCodec() string {
 	return video.audioCodec
 }
 
+func (video *Video) PixFmt() string {
+	return video.pixfmt
+}
+
 func (video *Video) FrameBuffer() []byte {
 	return video.framebuffer
 }

@@ -29,6 +29,7 @@ Duration() float64
 FPS() float64
 Codec() string
 AudioCodec() string
+PixFmt() string
 FrameBuffer() []byte
 SetFrameBuffer(buffer []byte)
 

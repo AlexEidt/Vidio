@@ -19,12 +19,17 @@ func Read(filename string) (int, int, []byte, error) {
 		return 0, 0, nil, err
 	}
 	defer f.Close()
+
 	image, _, err := image.Decode(f)
 	if err != nil {
 		return 0, 0, nil, err
 	}
+
 	bounds := image.Bounds().Max
-	data := make([]byte, bounds.Y*bounds.X*3)
+	size := bounds.X * bounds.Y * 3
+
+	data := make([]byte, size)
+
 	index := 0
 	for h := 0; h < bounds.Y; h++ {
 		for w := 0; w < bounds.X; w++ {
@@ -57,6 +62,7 @@ func Write(filename string, width, height int, data []byte) error {
 			index += 3
 		}
 	}
+
 	if strings.HasSuffix(filename, ".png") {
 		if err := png.Encode(f, image); err != nil {
 			return err

@@ -142,7 +142,6 @@ Vidio provides some convenience functions for reading and writing to images usin
 Read(filename string, buffer ...[]byte) (int, int, []byte, error)
 Write(filename string, width, height int, buffer []byte) error
 ```
-```
 
 ```go
 w, h, img, err := vidio.Read("input.png")

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"image"
 	"os"
-	"strings"
+	"path/filepath"
 
 	"image/color"
 	"image/jpeg"
@@ -75,14 +75,16 @@ func Write(filename string, width, height int, buffer []byte) error {
 		}
 	}
 
-	if strings.HasSuffix(filename, ".png") {
+	switch filepath.Ext(filename) {
+	case ".png":
 		if err := png.Encode(f, image); err != nil {
 			return err
 		}
-	} else if strings.HasSuffix(filename, ".jpg") || strings.HasSuffix(filename, ".jpeg") {
+	case ".jpg", ".jpeg":
 		if err := jpeg.Encode(f, image, nil); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }

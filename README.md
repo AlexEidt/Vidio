@@ -159,7 +159,9 @@ video, err := vidio.NewVideo("input.mp4")
 options := vidio.Options{
 	FPS: video.FPS(),
 	Bitrate: video.Bitrate(),
-	Audio: "input.mp4",
+}
+if video.AudioCodec() != "" {
+	options.Audio = "input.mp4"
 }
 
 writer, err := vidio.NewVideoWriter("output.mp4", video.Width(), video.Height(), &options)

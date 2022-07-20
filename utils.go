@@ -2,6 +2,7 @@ package vidio
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -27,13 +28,12 @@ func exists(filename string) bool {
 // Checks if the given program is installed.
 func checkExists(program string) error {
 	cmd := exec.Command(program, "-version")
+	errmsg := fmt.Errorf("%s is not installed", program)
 	if err := cmd.Start(); err != nil {
-		cmd.Process.Kill()
-		return errors.New(program + " is not installed.")
+		return errmsg
 	}
 	if err := cmd.Wait(); err != nil {
-		cmd.Process.Kill()
-		return errors.New(program + " is not installed.")
+		return errmsg
 	}
 	return nil
 }
@@ -53,12 +53,10 @@ func ffprobe(filename, stype string) (map[string]string, error) {
 
 	pipe, err := cmd.StdoutPipe()
 	if err != nil {
-		pipe.Close()
 		return nil, err
 	}
 
 	if err := cmd.Start(); err != nil {
-		cmd.Process.Kill()
 		return nil, err
 	}
 	// Read ffprobe output from Stdout.
@@ -73,7 +71,6 @@ func ffprobe(filename, stype string) (map[string]string, error) {
 	}
 	// Wait for ffprobe command to complete.
 	if err := cmd.Wait(); err != nil {
-		cmd.Process.Kill()
 		return nil, err
 	}
 
@@ -138,8 +135,7 @@ func parse(data string) float64 {
 
 // Returns the webcam name used for the -f option with ffmpeg.
 func webcam() (string, error) {
-	os := runtime.GOOS
-	switch os {
+	switch runtime.GOOS {
 	case "linux":
 		return "v4l2", nil
 	case "darwin":
@@ -147,7 +143,7 @@ func webcam() (string, error) {
 	case "windows":
 		return "dshow", nil // vfwcap
 	default:
-		return "", errors.New("Unsupported OS: " + os)
+		return "", fmt.Errorf("unsupported OS: %s", runtime.GOOS)
 	}
 }
 
@@ -221,7 +217,7 @@ func parseWebcamData(buffer []byte, camera *Camera) {
 	}
 	bufferstr = bufferstr[index:]
 	// Dimensions. widthxheight.
-	regex := regexp.MustCompile("\\d{2,}x\\d{2,}")
+	regex := regexp.MustCompile(`\d{2,}x\d{2,}`)
 	match := regex.FindString(bufferstr)
 	if len(match) > 0 {
 		split := strings.Split(match, "x")
@@ -229,7 +225,7 @@ func parseWebcamData(buffer []byte, camera *Camera) {
 		camera.height = int(parse(split[1]))
 	}
 	// FPS.
-	regex = regexp.MustCompile("\\d+(.\\d+)? fps")
+	regex = regexp.MustCompile(`\d+(.\d+)? fps`)
 	match = regex.FindString(bufferstr)
 	if len(match) > 0 {
 		index = strings.Index(match, " fps")
@@ -242,7 +238,7 @@ func parseWebcamData(buffer []byte, camera *Camera) {
 	regex = regexp.MustCompile("Video: .+,")
 	match = regex.FindString(bufferstr)
 	if len(match) > 0 {
-		match = match[7:]
+		match = match[len("Video: "):]
 		index = strings.Index(match, "(")
 		if index != -1 {
 			match = match[:index]

@@ -1,7 +1,6 @@
 package vidio
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -142,14 +141,14 @@ func NewVideoWriter(filename string, width, height int, options *Options) (*Vide
 
 	if options.Audio != "" {
 		if !exists(options.Audio) {
-			return nil, errors.New("Audio file " + options.Audio + " does not exist.")
+			return nil, fmt.Errorf("audio file %s does not exist", options.Audio)
 		}
 
 		audioData, err := ffprobe(options.Audio, "a")
 		if err != nil {
 			return nil, err
 		} else if len(audioData) == 0 {
-			return nil, errors.New("Given \"audio\" file " + options.Audio + " has no audio.")
+			return nil, fmt.Errorf("given audio file %s has no audio", options.Audio)
 		}
 
 		writer.audio = options.Audio
@@ -258,12 +257,10 @@ func initVideoWriter(writer *VideoWriter) error {
 
 	pipe, err := cmd.StdinPipe()
 	if err != nil {
-		pipe.Close()
 		return err
 	}
 	writer.pipe = &pipe
 	if err := cmd.Start(); err != nil {
-		cmd.Process.Kill()
 		return err
 	}
 

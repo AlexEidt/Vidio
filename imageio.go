@@ -1,7 +1,6 @@
 package vidio
 
 import (
-	"errors"
 	"fmt"
 	"image"
 	"os"
@@ -9,9 +8,7 @@ import (
 
 	"image/color"
 	"image/jpeg"
-	_ "image/jpeg"
 	"image/png"
-	_ "image/png"
 )
 
 // Reads an image from a file. Currently only supports png and jpeg.
@@ -33,12 +30,11 @@ func Read(filename string, buffer ...[]byte) (int, int, []byte, error) {
 	var data []byte
 	if len(buffer) > 0 {
 		if len(buffer[0]) < size {
-			errmsg := fmt.Sprintf("Buffer size (%d) is smaller than image size (%d)", len(buffer[0]), size)
-			return 0, 0, nil, errors.New(errmsg)
+			return 0, 0, nil, fmt.Errorf("buffer size (%d) is smaller than image size (%d)", len(buffer[0]), size)
 		}
 		data = buffer[0]
 	} else {
-		data = make([]byte, size, size)
+		data = make([]byte, size)
 	}
 
 	index := 0
@@ -46,12 +42,10 @@ func Read(filename string, buffer ...[]byte) (int, int, []byte, error) {
 		for w := 0; w < bounds.X; w++ {
 			r, g, b, _ := image.At(w, h).RGBA()
 			r, g, b = r/256, g/256, b/256
-			data[index] = byte(r)
-			index++
-			data[index] = byte(g)
-			index++
-			data[index] = byte(b)
-			index++
+			data[index+0] = byte(r)
+			data[index+1] = byte(g)
+			data[index+2] = byte(b)
+			index += 3
 		}
 	}
 	return bounds.X, bounds.Y, data, nil
@@ -84,6 +78,8 @@ func Write(filename string, width, height int, buffer []byte) error {
 		if err := jpeg.Encode(f, image, nil); err != nil {
 			return err
 		}
+	default:
+		return fmt.Errorf("unsupported file extension: %s", filepath.Ext(filename))
 	}
 
 	return nil

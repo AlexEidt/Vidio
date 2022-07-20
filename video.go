@@ -1,7 +1,7 @@
 package vidio
 
 import (
-	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -87,7 +87,7 @@ func (video *Video) SetFrameBuffer(buffer []byte) {
 // Uses ffprobe to get video information and fills in the Video struct with this data.
 func NewVideo(filename string) (*Video, error) {
 	if !exists(filename) {
-		return nil, errors.New("Video file " + filename + " does not exist")
+		return nil, fmt.Errorf("video file %s does not exist", filename)
 	}
 	// Check if ffmpeg and ffprobe are installed on the users machine.
 	if err := checkExists("ffmpeg"); err != nil {
@@ -134,12 +134,10 @@ func initVideo(video *Video) error {
 	video.cmd = cmd
 	pipe, err := cmd.StdoutPipe()
 	if err != nil {
-		pipe.Close()
 		return err
 	}
 	video.pipe = &pipe
 	if err := cmd.Start(); err != nil {
-		cmd.Process.Kill()
 		return err
 	}
 

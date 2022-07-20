@@ -1,7 +1,7 @@
 package vidio
 
 import (
-	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -70,11 +70,9 @@ func getDevicesWindows() ([]string, error) {
 	)
 	pipe, err := cmd.StderrPipe()
 	if err != nil {
-		pipe.Close()
 		return nil, err
 	}
 	if err := cmd.Start(); err != nil {
-		cmd.Process.Kill()
 		return nil, err
 	}
 	// Read list devices from Stdout.
@@ -110,12 +108,10 @@ func getCameraData(device string, camera *Camera) error {
 	// it will write the meta data to Stderr.
 	pipe, err := cmd.StderrPipe()
 	if err != nil {
-		pipe.Close()
 		return err
 	}
 	// Start the command.
 	if err := cmd.Start(); err != nil {
-		cmd.Process.Kill()
 		return err
 	}
 	// Read ffmpeg output from Stdout.
@@ -156,11 +152,11 @@ func NewCamera(stream int) (*Camera, error) {
 			return nil, err
 		}
 		if stream >= len(devices) {
-			return nil, errors.New("Could not find device with index: " + strconv.Itoa(stream))
+			return nil, fmt.Errorf("could not find device with index: %d", stream)
 		}
 		device = "video=" + devices[stream]
 	default:
-		return nil, errors.New("Unsupported OS: " + runtime.GOOS)
+		return nil, fmt.Errorf("unsupported OS: %s", runtime.GOOS)
 	}
 
 	camera := Camera{name: device, depth: 3}
@@ -196,13 +192,11 @@ func initCamera(camera *Camera) error {
 	camera.cmd = cmd
 	pipe, err := cmd.StdoutPipe()
 	if err != nil {
-		pipe.Close()
 		return err
 	}
 
 	camera.pipe = &pipe
 	if err := cmd.Start(); err != nil {
-		cmd.Process.Kill()
 		return err
 	}
 

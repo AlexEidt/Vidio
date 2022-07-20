@@ -130,9 +130,9 @@ frame := make([]byte, w*h*c) // Create Frame as RGB Image and modify
 writer.Write(frame) // Write Frame to video
 ```
 
-## The `SetFrameBuffer(buffer []byte)` method
+## The `SetFrameBuffer(buffer []byte)` function
 
-For the `SetFrameBuffer()` method, the `buffer` parameter must have a length of at least `video.Width() * video.Height() * video.Depth()` bytes to store the incoming video frame. The length of the buffer is not checked. It may be useful to have multiple buffers to keep track of previous video frames without having to copy data around.
+For the `SetFrameBuffer()` function, the `buffer` parameter must have a length of at least `video.Width() * video.Height() * video.Depth()` bytes to store the incoming video frame. The length of the buffer is not checked. It may be useful to have multiple buffers to keep track of previous video frames without having to copy data around.
 
 ## Images
 

@@ -29,7 +29,6 @@ func TestVideoMetaData(t *testing.T) {
 	assertEquals(video.fps, float64(30))
 	assertEquals(video.codec, "h264")
 	assertEquals(video.audioCodec, "aac")
-	assertEquals(video.pixfmt, "yuv420p")
 	assertEquals(len(video.framebuffer), 0)
 
 	if video.pipe != nil {

@@ -20,7 +20,6 @@ type Video struct {
 	fps         float64        // Frames per second.
 	codec       string         // Codec used for video encoding.
 	audioCodec  string         // Codec used for audio encoding.
-	pixfmt      string         // Pixel format video is stored in.
 	framebuffer []byte         // Raw frame data.
 	pipe        *io.ReadCloser // Stdout pipe for ffmpeg process.
 	cmd         *exec.Cmd      // ffmpeg command.
@@ -67,10 +66,6 @@ func (video *Video) Codec() string {
 
 func (video *Video) AudioCodec() string {
 	return video.audioCodec
-}
-
-func (video *Video) PixFmt() string {
-	return video.pixfmt
 }
 
 func (video *Video) FrameBuffer() []byte {

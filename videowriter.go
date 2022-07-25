@@ -198,7 +198,7 @@ func initVideoWriter(writer *VideoWriter) error {
 	command = append(
 		command,
 		"-vcodec", writer.codec,
-		"-pix_fmt", "yuv420p", // Output is 8-but RGB, no alpha.
+		"-pix_fmt", "yuv420p", // Output is 8-bit RGB, no alpha.
 	)
 
 	// Code from the imageio-ffmpeg project.

@@ -45,6 +45,10 @@ func (writer *VideoWriter) FileName() string {
 	return writer.filename
 }
 
+func (writer *VideoWriter) Audio() string {
+	return writer.audio
+}
+
 func (writer *VideoWriter) Width() int {
 	return writer.width
 }

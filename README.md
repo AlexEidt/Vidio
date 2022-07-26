@@ -4,6 +4,8 @@ A simple Video I/O library written in Go. This library relies on [FFmpeg](https:
 
 All frames are encoded and decoded in 8-bit RGB format.
 
+For Audio I/O using FFmpeg, see the [`aio`](https://github.com/AlexEidt/aio) project.
+
 ## Installation
 
 ```

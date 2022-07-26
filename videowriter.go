@@ -98,6 +98,10 @@ func NewVideoWriter(filename string, width, height int, options *Options) (*Vide
 
 	writer := VideoWriter{filename: filename}
 
+	if options == nil {
+		options = &Options{}
+	}
+
 	writer.width = width
 	writer.height = height
 	writer.bitrate = options.Bitrate

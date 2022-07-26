@@ -36,21 +36,11 @@ Read() bool
 Close()
 ```
 
-```go
-video, err := vidio.NewVideo("input.mp4")
-
-for video.Read() {
-	// "frame" stores the video frame as a flattened RGB image in row-major order
-	frame := video.FrameBuffer() // stored as: RGBRGBRGBRGB...
-	// Video processing here...
-}
-```
-
 If all frames have been read, `video` will be closed automatically. If not all frames are read, call `video.Close()` to close the video.
 
 ## `Camera`
 
-The `Camera` can read from any cameras on the device running Vidio. It takes in the stream index. On most machines the webcam device has index 0. Note that audio retrieval from the microphone is not yet supported.
+The `Camera` can read from any cameras on the device running Vidio. It takes in the stream index. On most machines the webcam device has index 0.
 
 ```go
 vidio.NewCamera(stream int) (*Camera, error)
@@ -66,18 +56,6 @@ SetFrameBuffer(buffer []byte)
 
 Read() bool
 Close()
-```
-
-```go
-camera, err := vidio.NewCamera(0)
-
-defer camera.Close()
-
-// Stream the webcam
-for camera.Read() {
-	frame := camera.FrameBuffer()
-	// Video processing here...
-}
 ```
 
 ## `VideoWriter`
@@ -117,18 +95,6 @@ type Options struct {
 }
 ```
 
-```go
-w, h, c := 1920, 1080, 3
-options := vidio.Options{} // Will fill in defaults if empty
-
-writer, err := vidio.NewVideoWriter("output.mp4", w, h, &options)
-
-defer writer.Close()
-
-frame := make([]byte, w*h*c) // Create Frame as RGB Image and modify
-writer.Write(frame) // Write Frame to video
-```
-
 ## The `SetFrameBuffer(buffer []byte)` function
 
 For the `SetFrameBuffer()` function, the `buffer` parameter must have a length of at least `video.Width() * video.Height() * video.Depth()` bytes to store the incoming video frame. The length of the buffer is not checked. It may be useful to have multiple buffers to keep track of previous video frames without having to copy data around.
@@ -140,12 +106,6 @@ Vidio provides some convenience functions for reading and writing to images usin
 ```go
 Read(filename string, buffer ...[]byte) (int, int, []byte, error)
 Write(filename string, width, height int, buffer []byte) error
-```
-
-```go
-w, h, img, err := vidio.Read("input.png")
-
-err := vidio.Write("output.jpg", w, h, img)
 ```
 
 ## Examples
@@ -186,7 +146,7 @@ writer, err := vidio.NewVideoWriter("output.mp4", webcam.Width(), webcam.Height(
 defer writer.Close()
 
 count := 0
-for webcam.Read() {
+for webcam.Read() && count < 1000{
 	frame := webcam.FrameBuffer()
 	for i := 0; i < len(frame); i += 3 {
 		r, g, b := frame[i+0], frame[i+1], frame[i+2]
@@ -199,9 +159,6 @@ for webcam.Read() {
 	writer.Write(frame)
 
 	count++
-	if count > 1000 {
-		break
-	}
 }
 ```
 

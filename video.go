@@ -72,10 +72,14 @@ func (video *Video) FrameBuffer() []byte {
 	return video.framebuffer
 }
 
-// Sets the framebuffer to the given byte array. Note that "buffer" must be large enough
-// to store one frame of video data which is width*height*3.
-func (video *Video) SetFrameBuffer(buffer []byte) {
+func (video *Video) SetFrameBuffer(buffer []byte) error {
+	size := video.width * video.height * video.depth
+	if len(buffer) < size {
+		return fmt.Errorf("buffer size %d is smaller than frame size %d", len(buffer), size)
+	}
+
 	video.framebuffer = buffer
+	return nil
 }
 
 // Creates a new Video struct.
@@ -136,7 +140,10 @@ func initVideo(video *Video) error {
 		return err
 	}
 
-	video.framebuffer = make([]byte, video.width*video.height*video.depth)
+	if video.framebuffer == nil {
+		video.framebuffer = make([]byte, video.width*video.height*video.depth)
+	}
+
 	return nil
 }
 

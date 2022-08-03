@@ -12,6 +12,23 @@ func assertEquals(actual, expected interface{}) {
 	}
 }
 
+func TestSetBuffer(t *testing.T) {
+	video, err := NewVideo("test/koala.mp4")
+	if err != nil {
+		panic(err)
+	}
+	defer video.Close()
+
+	size := video.width*video.height*video.depth + 101
+	video.SetFrameBuffer(make([]uint8, size))
+
+	video.Read()
+
+	assertEquals(len(video.framebuffer), size)
+
+	fmt.Println("Set Buffer Test Passed")
+}
+
 func TestVideoMetaData(t *testing.T) {
 	video, err := NewVideo("test/koala.mp4")
 	if err != nil {

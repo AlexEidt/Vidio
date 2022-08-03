@@ -32,7 +32,7 @@ FPS() float64
 Codec() string
 AudioCodec() string
 FrameBuffer() []byte
-SetFrameBuffer(buffer []byte)
+SetFrameBuffer(buffer []byte) error
 
 Read() bool
 Close()
@@ -54,7 +54,7 @@ Depth() int
 FPS() float64
 Codec() string
 FrameBuffer() []byte
-SetFrameBuffer(buffer []byte)
+SetFrameBuffer(buffer []byte) error
 
 Read() bool
 Close()

@@ -51,10 +51,14 @@ func (camera *Camera) FrameBuffer() []byte {
 	return camera.framebuffer
 }
 
-// Sets the framebuffer to the given byte array. Note that "buffer" must be large enough
-// to store one frame of video data which is width*height*3.
-func (camera *Camera) SetFrameBuffer(buffer []byte) {
+func (camera *Camera) SetFrameBuffer(buffer []byte) error {
+	size := camera.width * camera.height * camera.depth
+	if len(buffer) < size {
+		return fmt.Errorf("buffer size %d is smaller than frame size %d", len(buffer), size)
+	}
+
 	camera.framebuffer = buffer
+	return nil
 }
 
 // Returns the webcam device name.
@@ -200,7 +204,10 @@ func initCamera(camera *Camera) error {
 		return err
 	}
 
-	camera.framebuffer = make([]byte, camera.width*camera.height*camera.depth)
+	if camera.framebuffer == nil {
+		camera.framebuffer = make([]byte, camera.width*camera.height*camera.depth)
+	}
+
 	return nil
 }
 

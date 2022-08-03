@@ -77,6 +77,7 @@ Macro() int
 FPS() float64
 Quality() float64
 Codec() string
+Format() string
 AudioCodec() string
 
 Write(frame []byte) error
@@ -85,21 +86,18 @@ Close()
 
 ```go
 type Options struct {
-	Bitrate     int             // Bitrate
-	Loop        int             // For GIFs only. -1=no loop, 0=loop forever, >0=loop n times
-	Delay       int             // Delay for Final Frame of GIFs. Default -1 (Use same delay as previous frame)
-	Macro       int             // macro size for determining how to resize frames for codecs. Default 16
-	FPS         float64         // Frames per second. Default 25
-	Quality     float64         // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst
-	Codec       string          // Codec for video. Default libx264
-	Audio       string          // File path for audio for the video. If no audio, audio=""
-	AudioCodec  string          // Codec for audio. Default aac
+	Bitrate    int     // Bitrate.
+	Loop       int     // For GIFs only. -1=no loop, 0=infinite loop, >0=number of loops.
+	Delay      int     // Delay for final frame of GIFs.
+	Macro      int     // Macroblock size for determining how to resize frames for codecs.
+	FPS        float64 // Frames per second for output video.
+	Quality    float64 // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst.
+	Codec      string  // Codec for video.
+	Format     string  // Pixel Format for video. Default "rgb24".
+	Audio      string  // File path for audio. If no audio, audio="".
+	AudioCodec string  // Codec for audio.
 }
 ```
-
-## The `SetFrameBuffer(buffer []byte)` function
-
-For the `SetFrameBuffer()` function, the `buffer` parameter must have a length of at least `video.Width() * video.Height() * video.Depth()` bytes to store the incoming video frame. The length of the buffer is not checked. It may be useful to have multiple buffers to keep track of previous video frames without having to copy data around.
 
 ## Images
 
@@ -115,8 +113,7 @@ Write(filename string, width, height int, buffer []byte) error
 Copy `input.mp4` to `output.mp4`. Copy the audio from `input.mp4` to `output.mp4` as well.
 
 ```go
-video, err := vidio.NewVideo("input.mp4")
-
+video, _ := vidio.NewVideo("input.mp4")
 options := vidio.Options{
 	FPS: video.FPS(),
 	Bitrate: video.Bitrate(),
@@ -125,7 +122,7 @@ if video.AudioCodec() != "" {
 	options.Audio = "input.mp4"
 }
 
-writer, err := vidio.NewVideoWriter("output.mp4", video.Width(), video.Height(), &options)
+writer, _ := vidio.NewVideoWriter("output.mp4", video.Width(), video.Height(), &options)
 
 defer writer.Close()
 
@@ -134,32 +131,19 @@ for video.Read() {
 }
 ```
 
-Grayscale 1000 frames of webcam stream and store in `output.mp4`.
+Read 1000 frames of a webcam stream and store in `output.mp4`.
 
 ```go
-webcam, err := vidio.NewCamera(0)
-
+webcam, _ := vidio.NewCamera(0)
 defer webcam.Close()
 
 options := vidio.Options{FPS: webcam.FPS()}
-
-writer, err := vidio.NewVideoWriter("output.mp4", webcam.Width(), webcam.Height(), &options)
-
+writer, _ := vidio.NewVideoWriter("output.mp4", webcam.Width(), webcam.Height(), &options)
 defer writer.Close()
 
 count := 0
-for webcam.Read() && count < 1000{
-	frame := webcam.FrameBuffer()
-	for i := 0; i < len(frame); i += 3 {
-		r, g, b := frame[i+0], frame[i+1], frame[i+2]
-		gray := uint8((3*int(r) + 4*int(g) + int(b)) / 8)
-		frame[i] = gray
-		frame[i+1] = gray
-		frame[i+2] = gray
-	}
-
-	writer.Write(frame)
-
+for webcam.Read() && count < 1000 {
+	writer.Write(webcam.FrameBuffer())
 	count++
 }
 ```
@@ -167,16 +151,14 @@ for webcam.Read() && count < 1000{
 Create a gif from a series of `png` files enumerated from 1 to 10 that loops continuously with a final frame delay of 1000 centiseconds.
 
 ```go
-w, h, img, err := vidio.Read("1.png") // Get frame dimensions from first image
+w, h, img, _ := vidio.Read("1.png") // Get frame dimensions from first image
 
 options := vidio.Options{FPS: 1, Loop: 0, Delay: 1000}
-
-gif, err := vidio.NewVideoWriter("output.gif", w, h, &options)
-
+gif, _ := vidio.NewVideoWriter("output.gif", w, h, &options)
 defer gif.Close()
 
 for i := 1; i <= 10; i++ {
-	w, h, img, err := vidio.Read(strconv.Itoa(i)+".png")
+	w, h, img, _ := vidio.Read(strconv.Itoa(i)+".png")
 	gif.Write(img)
 }
 ```

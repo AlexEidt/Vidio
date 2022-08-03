@@ -127,7 +127,8 @@ func initVideo(video *Video) error {
 		"-f", "image2pipe",
 		"-loglevel", "quiet",
 		"-pix_fmt", "rgb24",
-		"-vcodec", "rawvideo", "-",
+		"-vcodec", "rawvideo",
+		"-",
 	)
 
 	video.cmd = cmd

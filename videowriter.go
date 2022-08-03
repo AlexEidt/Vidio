@@ -23,6 +23,7 @@ type VideoWriter struct {
 	fps        float64         // Frames per second for output video. Default 25.
 	quality    float64         // Used if bitrate not given. Default 0.5.
 	codec      string          // Codec to encode video with. Default libx264.
+	format     string          // Output format. Default rgb24.
 	audioCodec string          // Codec to encode audio with. Default aac.
 	pipe       *io.WriteCloser // Stdout pipe of ffmpeg process.
 	cmd        *exec.Cmd       // ffmpeg command.
@@ -37,6 +38,7 @@ type Options struct {
 	FPS        float64 // Frames per second for output video.
 	Quality    float64 // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst.
 	Codec      string  // Codec for video.
+	Format     string  // Pixel Format for video. Default "rgb24".
 	Audio      string  // File path for audio. If no audio, audio="".
 	AudioCodec string  // Codec for audio.
 }
@@ -83,6 +85,10 @@ func (writer *VideoWriter) Quality() float64 {
 
 func (writer *VideoWriter) Codec() string {
 	return writer.codec
+}
+
+func (writer *VideoWriter) Format() string {
+	return writer.format
 }
 
 func (writer *VideoWriter) AudioCodec() string {
@@ -147,6 +153,12 @@ func NewVideoWriter(filename string, width, height int, options *Options) (*Vide
 		writer.codec = options.Codec
 	}
 
+	if options.Format == "" {
+		writer.format = "rgb24"
+	} else {
+		writer.format = options.Format
+	}
+
 	if options.Audio != "" {
 		if !exists(options.Audio) {
 			return nil, fmt.Errorf("audio file %s does not exist", options.Audio)
@@ -183,7 +195,7 @@ func initVideoWriter(writer *VideoWriter) error {
 		"-f", "rawvideo",
 		"-vcodec", "rawvideo",
 		"-s", fmt.Sprintf("%dx%d", writer.width, writer.height), // frame w x h.
-		"-pix_fmt", "rgb24",
+		"-pix_fmt", writer.format,
 		"-r", fmt.Sprintf("%.02f", writer.fps), // frames per second.
 		"-i", "-", // The input comes from stdin.
 	}

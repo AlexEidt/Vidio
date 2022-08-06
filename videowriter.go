@@ -185,7 +185,7 @@ func NewVideoWriter(filename string, width, height int, options *Options) (*Vide
 
 // Once the user calls Write() for the first time on a VideoWriter struct,
 // the ffmpeg command which is used to write to the video file is started.
-func initVideoWriter(writer *VideoWriter) error {
+func (writer *VideoWriter) init() error {
 	// If user exits with Ctrl+C, stop ffmpeg process.
 	writer.cleanup()
 	// ffmpeg command to write to video file. Takes in bytes from Stdin and encodes them.
@@ -291,7 +291,7 @@ func initVideoWriter(writer *VideoWriter) error {
 func (writer *VideoWriter) Write(frame []byte) error {
 	// If cmd is nil, video writing has not been set up.
 	if writer.cmd == nil {
-		if err := initVideoWriter(writer); err != nil {
+		if err := writer.init(); err != nil {
 			return err
 		}
 	}

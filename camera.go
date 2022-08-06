@@ -6,8 +6,10 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"regexp"
 	"runtime"
 	"strconv"
+	"strings"
 	"syscall"
 )
 
@@ -61,41 +63,86 @@ func (camera *Camera) SetFrameBuffer(buffer []byte) error {
 	return nil
 }
 
-// Returns the webcam device name.
-// On windows, ffmpeg output from the -list_devices command is parsed to find the device name.
-func getDevicesWindows() ([]string, error) {
-	// Run command to get list of devices.
-	cmd := exec.Command(
-		"ffmpeg",
-		"-hide_banner",
-		"-list_devices", "true",
-		"-f", "dshow",
-		"-i", "dummy",
-	)
-	pipe, err := cmd.StderrPipe()
-	if err != nil {
+// Creates a new camera struct that can read from the device with the given stream index.
+func NewCamera(stream int) (*Camera, error) {
+	// Check if ffmpeg is installed on the users machine.
+	if err := checkExists("ffmpeg"); err != nil {
 		return nil, err
 	}
-	if err := cmd.Start(); err != nil {
-		return nil, err
-	}
-	// Read list devices from Stdout.
-	buffer := make([]byte, 2<<10)
-	total := 0
-	for {
-		n, err := pipe.Read(buffer[total:])
-		total += n
-		if err == io.EOF {
-			break
+
+	var device string
+	switch runtime.GOOS {
+	case "linux":
+		device = "/dev/video" + strconv.Itoa(stream)
+	case "darwin":
+		device = strconv.Itoa(stream)
+	case "windows":
+		// If OS is windows, we need to parse the listed devices to find which corresponds to the
+		// given "stream" index.
+		devices, err := getDevicesWindows()
+		if err != nil {
+			return nil, err
 		}
+		if stream >= len(devices) {
+			return nil, fmt.Errorf("could not find device with index: %d", stream)
+		}
+		device = "video=" + devices[stream]
+	default:
+		return nil, fmt.Errorf("unsupported OS: %s", runtime.GOOS)
 	}
-	cmd.Wait()
-	devices := parseDevices(buffer)
-	return devices, nil
+
+	camera := &Camera{name: device, depth: 3}
+	if err := camera.getCameraData(device); err != nil {
+		return nil, err
+	}
+	return camera, nil
+}
+
+// Parses the webcam metadata (width, height, fps, codec) from ffmpeg output.
+func (camera *Camera) parseWebcamData(buffer []byte) {
+	bufferstr := string(buffer)
+	index := strings.Index(bufferstr, "Stream #")
+	if index == -1 {
+		index++
+	}
+	bufferstr = bufferstr[index:]
+	// Dimensions. widthxheight.
+	regex := regexp.MustCompile(`\d{2,}x\d{2,}`)
+	match := regex.FindString(bufferstr)
+	if len(match) > 0 {
+		split := strings.Split(match, "x")
+		camera.width = int(parse(split[0]))
+		camera.height = int(parse(split[1]))
+	}
+	// FPS.
+	regex = regexp.MustCompile(`\d+(.\d+)? fps`)
+	match = regex.FindString(bufferstr)
+	if len(match) > 0 {
+		index = strings.Index(match, " fps")
+		if index != -1 {
+			match = match[:index]
+		}
+		camera.fps = parse(match)
+	}
+	// Codec.
+	regex = regexp.MustCompile("Video: .+,")
+	match = regex.FindString(bufferstr)
+	if len(match) > 0 {
+		match = match[len("Video: "):]
+		index = strings.Index(match, "(")
+		if index != -1 {
+			match = match[:index]
+		}
+		index = strings.Index(match, ",")
+		if index != -1 {
+			match = match[:index]
+		}
+		camera.codec = strings.TrimSpace(match)
+	}
 }
 
 // Get camera meta data such as width, height, fps and codec.
-func getCameraData(device string, camera *Camera) error {
+func (camera *Camera) getCameraData(device string) error {
 	// Run command to get camera data.
 	// Webcam will turn on and then off in quick succession.
 	webcamDeviceName, err := webcam()
@@ -131,48 +178,13 @@ func getCameraData(device string, camera *Camera) error {
 	// Wait for the command to finish.
 	cmd.Wait()
 
-	parseWebcamData(buffer[:total], camera)
+	camera.parseWebcamData(buffer[:total])
 	return nil
-}
-
-// Creates a new camera struct that can read from the device with the given stream index.
-func NewCamera(stream int) (*Camera, error) {
-	// Check if ffmpeg is installed on the users machine.
-	if err := checkExists("ffmpeg"); err != nil {
-		return nil, err
-	}
-
-	var device string
-	switch runtime.GOOS {
-	case "linux":
-		device = "/dev/video" + strconv.Itoa(stream)
-	case "darwin":
-		device = strconv.Itoa(stream)
-	case "windows":
-		// If OS is windows, we need to parse the listed devices to find which corresponds to the
-		// given "stream" index.
-		devices, err := getDevicesWindows()
-		if err != nil {
-			return nil, err
-		}
-		if stream >= len(devices) {
-			return nil, fmt.Errorf("could not find device with index: %d", stream)
-		}
-		device = "video=" + devices[stream]
-	default:
-		return nil, fmt.Errorf("unsupported OS: %s", runtime.GOOS)
-	}
-
-	camera := Camera{name: device, depth: 3}
-	if err := getCameraData(device, &camera); err != nil {
-		return nil, err
-	}
-	return &camera, nil
 }
 
 // Once the user calls Read() for the first time on a Camera struct,
 // the ffmpeg command which is used to read the camera device is started.
-func initCamera(camera *Camera) error {
+func (camera *Camera) init() error {
 	// If user exits with Ctrl+C, stop ffmpeg process.
 	camera.cleanup()
 
@@ -190,7 +202,8 @@ func initCamera(camera *Camera) error {
 		"-i", camera.name,
 		"-f", "image2pipe",
 		"-pix_fmt", "rgb24",
-		"-vcodec", "rawvideo", "-",
+		"-vcodec", "rawvideo",
+		"-",
 	)
 
 	camera.cmd = cmd
@@ -215,7 +228,7 @@ func initCamera(camera *Camera) error {
 func (camera *Camera) Read() bool {
 	// If cmd is nil, video reading has not been initialized.
 	if camera.cmd == nil {
-		if err := initCamera(camera); err != nil {
+		if err := camera.init(); err != nil {
 			return false
 		}
 	}

@@ -223,12 +223,11 @@ dummy: Immediate exit requested`,
 
 func TestWebcamParsing(t *testing.T) {
 	camera := &Camera{}
-	err := getCameraData(
+	err := camera.getCameraData(
 		`Input #0, dshow, from 'video=Integrated Camera':
   Duration: N/A, start: 1367309.442000, bitrate: N/A
   Stream #0:0: Video: mjpeg (Baseline) (MJPG / 0x47504A4D), yuvj422p(pc, bt470bg/unknown/unknown), 1280x720, 30 fps, 30 tbr, 10000k tbn
 At least one output file must be specified`,
-		camera,
 	)
 
 	if err != nil {

@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strings"
 	"syscall"
 )
 
@@ -107,7 +108,7 @@ func NewVideo(filename string) (*Video, error) {
 
 	video := &Video{filename: filename, depth: 3}
 
-	addVideoData(videoData, video)
+	video.addVideoData(videoData)
 	if audioCodec, ok := audioData["codec_name"]; ok {
 		video.audioCodec = audioCodec
 	}
@@ -115,9 +116,39 @@ func NewVideo(filename string) (*Video, error) {
 	return video, nil
 }
 
+// Adds Video data to the video struct from the ffprobe output.
+func (video *Video) addVideoData(data map[string]string) {
+	if width, ok := data["width"]; ok {
+		video.width = int(parse(width))
+	}
+	if height, ok := data["height"]; ok {
+		video.height = int(parse(height))
+	}
+	if duration, ok := data["duration"]; ok {
+		video.duration = float64(parse(duration))
+	}
+	if frames, ok := data["nb_frames"]; ok {
+		video.frames = int(parse(frames))
+	}
+
+	if fps, ok := data["r_frame_rate"]; ok {
+		split := strings.Split(fps, "/")
+		if len(split) == 2 && split[0] != "" && split[1] != "" {
+			video.fps = parse(split[0]) / parse(split[1])
+		}
+	}
+
+	if bitrate, ok := data["bit_rate"]; ok {
+		video.bitrate = int(parse(bitrate))
+	}
+	if codec, ok := data["codec_name"]; ok {
+		video.codec = codec
+	}
+}
+
 // Once the user calls Read() for the first time on a Video struct,
 // the ffmpeg command which is used to read the video is started.
-func initVideo(video *Video) error {
+func (video *Video) init() error {
 	// If user exits with Ctrl+C, stop ffmpeg process.
 	video.cleanup()
 	// ffmpeg command to pipe video data to stdout in 8-bit RGB format.
@@ -153,7 +184,7 @@ func initVideo(video *Video) error {
 func (video *Video) Read() bool {
 	// If cmd is nil, video reading has not been initialized.
 	if video.cmd == nil {
-		if err := initVideo(video); err != nil {
+		if err := video.init(); err != nil {
 			return false
 		}
 	}

@@ -91,36 +91,6 @@ func parseFFprobe(input []byte) map[string]string {
 	return data
 }
 
-// Adds Video data to the video struct from the ffprobe output.
-func addVideoData(data map[string]string, video *Video) {
-	if width, ok := data["width"]; ok {
-		video.width = int(parse(width))
-	}
-	if height, ok := data["height"]; ok {
-		video.height = int(parse(height))
-	}
-	if duration, ok := data["duration"]; ok {
-		video.duration = float64(parse(duration))
-	}
-	if frames, ok := data["nb_frames"]; ok {
-		video.frames = int(parse(frames))
-	}
-
-	if fps, ok := data["r_frame_rate"]; ok {
-		split := strings.Split(fps, "/")
-		if len(split) == 2 && split[0] != "" && split[1] != "" {
-			video.fps = parse(split[0]) / parse(split[1])
-		}
-	}
-
-	if bitrate, ok := data["bit_rate"]; ok {
-		video.bitrate = int(parse(bitrate))
-	}
-	if codec, ok := data["codec_name"]; ok {
-		video.codec = codec
-	}
-}
-
 // Parses the given data into a float64.
 func parse(data string) float64 {
 	n, err := strconv.ParseFloat(data, 64)
@@ -195,7 +165,6 @@ func parseDevices(buffer []byte) []string {
 	return devices
 }
 
-// Helper function. Array contains function.
 func contains(list []string, item string) bool {
 	for _, i := range list {
 		if i == item {
@@ -205,45 +174,35 @@ func contains(list []string, item string) bool {
 	return false
 }
 
-// Parses the webcam metadata (width, height, fps, codec) from ffmpeg output.
-func parseWebcamData(buffer []byte, camera *Camera) {
-	bufferstr := string(buffer)
-	index := strings.Index(bufferstr, "Stream #")
-	if index == -1 {
-		index++
+// Returns the webcam device name.
+// On windows, ffmpeg output from the -list_devices command is parsed to find the device name.
+func getDevicesWindows() ([]string, error) {
+	// Run command to get list of devices.
+	cmd := exec.Command(
+		"ffmpeg",
+		"-hide_banner",
+		"-list_devices", "true",
+		"-f", "dshow",
+		"-i", "dummy",
+	)
+	pipe, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, err
 	}
-	bufferstr = bufferstr[index:]
-	// Dimensions. widthxheight.
-	regex := regexp.MustCompile(`\d{2,}x\d{2,}`)
-	match := regex.FindString(bufferstr)
-	if len(match) > 0 {
-		split := strings.Split(match, "x")
-		camera.width = int(parse(split[0]))
-		camera.height = int(parse(split[1]))
+	if err := cmd.Start(); err != nil {
+		return nil, err
 	}
-	// FPS.
-	regex = regexp.MustCompile(`\d+(.\d+)? fps`)
-	match = regex.FindString(bufferstr)
-	if len(match) > 0 {
-		index = strings.Index(match, " fps")
-		if index != -1 {
-			match = match[:index]
+	// Read list devices from Stdout.
+	buffer := make([]byte, 2<<10)
+	total := 0
+	for {
+		n, err := pipe.Read(buffer[total:])
+		total += n
+		if err == io.EOF {
+			break
 		}
-		camera.fps = parse(match)
 	}
-	// Codec.
-	regex = regexp.MustCompile("Video: .+,")
-	match = regex.FindString(bufferstr)
-	if len(match) > 0 {
-		match = match[len("Video: "):]
-		index = strings.Index(match, "(")
-		if index != -1 {
-			match = match[:index]
-		}
-		index = strings.Index(match, ",")
-		if index != -1 {
-			match = match[:index]
-		}
-		camera.codec = strings.TrimSpace(match)
-	}
+	cmd.Wait()
+	devices := parseDevices(buffer)
+	return devices, nil
 }

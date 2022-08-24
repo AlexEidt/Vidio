@@ -8,7 +8,6 @@ import (
 	"os/signal"
 	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
 	"syscall"
 )
@@ -73,9 +72,9 @@ func NewCamera(stream int) (*Camera, error) {
 	var device string
 	switch runtime.GOOS {
 	case "linux":
-		device = "/dev/video" + strconv.Itoa(stream)
+		device = fmt.Sprintf("/dev/video%d", stream)
 	case "darwin":
-		device = strconv.Itoa(stream)
+		device = fmt.Sprintf(`"%d"`, stream)
 	case "windows":
 		// If OS is windows, we need to parse the listed devices to find which corresponds to the
 		// given "stream" index.
@@ -83,10 +82,10 @@ func NewCamera(stream int) (*Camera, error) {
 		if err != nil {
 			return nil, err
 		}
-		if stream >= len(devices) {
+		if stream < 0 || stream >= len(devices) {
 			return nil, fmt.Errorf("could not find device with index: %d", stream)
 		}
-		device = "video=" + devices[stream]
+		device = fmt.Sprintf("video=%s", devices[stream])
 	default:
 		return nil, fmt.Errorf("unsupported OS: %s", runtime.GOOS)
 	}

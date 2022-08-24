@@ -102,7 +102,7 @@ func NewVideoWriter(filename string, width, height int, options *Options) (*Vide
 		return nil, err
 	}
 
-	writer := VideoWriter{filename: filename}
+	writer := &VideoWriter{filename: filename}
 
 	if options == nil {
 		options = &Options{}
@@ -180,7 +180,7 @@ func NewVideoWriter(filename string, width, height int, options *Options) (*Vide
 		}
 	}
 
-	return &writer, nil
+	return writer, nil
 }
 
 // Once the user calls Write() for the first time on a VideoWriter struct,

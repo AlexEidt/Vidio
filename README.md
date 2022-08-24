@@ -19,7 +19,7 @@ The `Video` struct stores data about a video file you give it. The code below sh
 Calling the `Read()` function will fill in the `Video` struct `framebuffer` with the next frame data as 8-bit RGB data, stored in a flattened byte array in row-major order where each pixel is represented by three consecutive bytes representing the R, G and B component of that pixel.
 
 ```go
-vidio.NewVideo() (*Video, error)
+vidio.NewVideo() (*vidio.Video, error)
 
 FileName() string
 Width() int
@@ -45,7 +45,7 @@ If all frames have been read, `video` will be closed automatically. If not all f
 The `Camera` can read from any cameras on the device running Vidio. It takes in the stream index. On most machines the webcam device has index 0.
 
 ```go
-vidio.NewCamera(stream int) (*Camera, error)
+vidio.NewCamera(stream int) (*vidio.Camera, error)
 
 Name() string
 Width() int
@@ -65,7 +65,7 @@ Close()
 The `VideoWriter` is used to write frames to a video file. The only required parameters are the output file name, the width and height of the frames being written, and an `Options` struct. This contains all the desired properties of the new video you want to create.
 
 ```go
-vidio.NewVideoWriter() (*VideoWriter, error)
+vidio.NewVideoWriter() (*vidio.VideoWriter, error)
 
 FileName() string
 Width() int

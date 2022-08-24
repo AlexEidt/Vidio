@@ -19,7 +19,7 @@ The `Video` struct stores data about a video file you give it. The code below sh
 Calling the `Read()` function will fill in the `Video` struct `framebuffer` with the next frame data as 8-bit RGB data, stored in a flattened byte array in row-major order where each pixel is represented by three consecutive bytes representing the R, G and B component of that pixel.
 
 ```go
-vidio.NewVideo() (*vidio.Video, error)
+vidio.NewVideo(filename string) (*vidio.Video, error)
 
 FileName() string
 Width() int
@@ -65,7 +65,7 @@ Close()
 The `VideoWriter` is used to write frames to a video file. The only required parameters are the output file name, the width and height of the frames being written, and an `Options` struct. This contains all the desired properties of the new video you want to create.
 
 ```go
-vidio.NewVideoWriter() (*vidio.VideoWriter, error)
+vidio.NewVideoWriter(filename string, width, height int, options *vidio.Options) (*vidio.VideoWriter, error)
 
 FileName() string
 Width() int

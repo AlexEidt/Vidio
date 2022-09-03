@@ -101,6 +101,11 @@ func NewVideo(filename string) (*Video, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if len(videoData) == 0 {
+		return nil, fmt.Errorf("no video data found in %s", filename)
+	}
+
 	audioData, err := ffprobe(filename, "a")
 	if err != nil {
 		return nil, err

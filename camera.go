@@ -65,7 +65,7 @@ func (camera *Camera) SetFrameBuffer(buffer []byte) error {
 // Creates a new camera struct that can read from the device with the given stream index.
 func NewCamera(stream int) (*Camera, error) {
 	// Check if ffmpeg is installed on the users machine.
-	if err := checkExists("ffmpeg"); err != nil {
+	if err := installed("ffmpeg"); err != nil {
 		return nil, err
 	}
 

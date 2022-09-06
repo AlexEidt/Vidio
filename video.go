@@ -90,10 +90,10 @@ func NewVideo(filename string) (*Video, error) {
 		return nil, fmt.Errorf("video file %s does not exist", filename)
 	}
 	// Check if ffmpeg and ffprobe are installed on the users machine.
-	if err := checkExists("ffmpeg"); err != nil {
+	if err := installed("ffmpeg"); err != nil {
 		return nil, err
 	}
-	if err := checkExists("ffprobe"); err != nil {
+	if err := installed("ffprobe"); err != nil {
 		return nil, err
 	}
 

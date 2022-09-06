@@ -98,7 +98,7 @@ func (writer *VideoWriter) AudioCodec() string {
 // Creates a new VideoWriter struct with default values from the Options struct.
 func NewVideoWriter(filename string, width, height int, options *Options) (*VideoWriter, error) {
 	// Check if ffmpeg is installed on the users machine.
-	if err := checkExists("ffmpeg"); err != nil {
+	if err := installed("ffmpeg"); err != nil {
 		return nil, err
 	}
 

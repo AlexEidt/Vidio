@@ -1,6 +1,7 @@
 package vidio
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -98,16 +99,15 @@ func NewCamera(stream int) (*Camera, error) {
 }
 
 // Parses the webcam metadata (width, height, fps, codec) from ffmpeg output.
-func (camera *Camera) parseWebcamData(buffer []byte) {
-	bufferstr := string(buffer)
-	index := strings.Index(bufferstr, "Stream #")
+func (camera *Camera) parseWebcamData(buffer string) {
+	index := strings.Index(buffer, "Stream #")
 	if index == -1 {
 		index++
 	}
-	bufferstr = bufferstr[index:]
+	buffer = buffer[index:]
 	// Dimensions. widthxheight.
 	regex := regexp.MustCompile(`\d{2,}x\d{2,}`)
-	match := regex.FindString(bufferstr)
+	match := regex.FindString(buffer)
 	if len(match) > 0 {
 		split := strings.Split(match, "x")
 		camera.width = int(parse(split[0]))
@@ -115,7 +115,7 @@ func (camera *Camera) parseWebcamData(buffer []byte) {
 	}
 	// FPS.
 	regex = regexp.MustCompile(`\d+(.\d+)? fps`)
-	match = regex.FindString(bufferstr)
+	match = regex.FindString(buffer)
 	if len(match) > 0 {
 		index = strings.Index(match, " fps")
 		if index != -1 {
@@ -125,7 +125,7 @@ func (camera *Camera) parseWebcamData(buffer []byte) {
 	}
 	// Codec.
 	regex = regexp.MustCompile("Video: .+,")
-	match = regex.FindString(bufferstr)
+	match = regex.FindString(buffer)
 	if len(match) > 0 {
 		match = match[len("Video: "):]
 		index = strings.Index(match, "(")
@@ -164,20 +164,22 @@ func (camera *Camera) getCameraData(device string) error {
 	if err := cmd.Start(); err != nil {
 		return err
 	}
+
 	// Read ffmpeg output from Stdout.
-	buffer := make([]byte, 2<<11)
-	total := 0
+	builder := bytes.Buffer{}
+	buffer := make([]byte, 1024)
 	for {
-		n, err := pipe.Read(buffer[total:])
-		total += n
+		n, err := pipe.Read(buffer)
+		builder.Write(buffer[:n])
 		if err == io.EOF {
 			break
 		}
 	}
+
 	// Wait for the command to finish.
 	cmd.Wait()
 
-	camera.parseWebcamData(buffer[:total])
+	camera.parseWebcamData(builder.String())
 	return nil
 }
 

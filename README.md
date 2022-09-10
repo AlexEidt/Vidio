@@ -20,6 +20,7 @@ Calling the `Read()` function will fill in the `Video` struct `framebuffer` with
 
 ```go
 vidio.NewVideo(filename string) (*vidio.Video, error)
+vidio.NewVideoStreams(filename string) ([]*vidio.Video, error)
 
 FileName() string
 Width() int
@@ -31,7 +32,9 @@ Duration() float64
 FPS() float64
 Codec() string
 AudioCodec() string
+Stream() int
 FrameBuffer() []byte
+MetaData() map[string]string
 SetFrameBuffer(buffer []byte) error
 
 Read() bool

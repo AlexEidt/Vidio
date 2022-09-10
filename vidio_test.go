@@ -46,6 +46,7 @@ func TestVideoMetaData(t *testing.T) {
 	assertEquals(video.fps, float64(30))
 	assertEquals(video.codec, "h264")
 	assertEquals(video.audioCodec, "aac")
+	assertEquals(video.stream, 0)
 	assertEquals(len(video.framebuffer), 0)
 
 	if video.pipe != nil {
@@ -163,26 +164,26 @@ func TestFFprobe(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	assertEquals(koalaVideo["width"], "480")
-	assertEquals(koalaVideo["height"], "270")
-	assertEquals(koalaVideo["duration"], "3.366667")
-	assertEquals(koalaVideo["bit_rate"], "170549")
-	assertEquals(koalaVideo["codec_name"], "h264")
+	assertEquals(koalaVideo[0]["width"], "480")
+	assertEquals(koalaVideo[0]["height"], "270")
+	assertEquals(koalaVideo[0]["duration"], "3.366667")
+	assertEquals(koalaVideo[0]["bit_rate"], "170549")
+	assertEquals(koalaVideo[0]["codec_name"], "h264")
 	koalaAudio, err := ffprobe("test/koala.mp4", "a")
 	if err != nil {
 		panic(err)
 	}
-	assertEquals(koalaAudio["codec_name"], "aac")
+	assertEquals(koalaAudio[0]["codec_name"], "aac")
 
 	koalaVideo, err = ffprobe("test/koala-noaudio.mp4", "v")
 	if err != nil {
 		panic(err)
 	}
-	assertEquals(koalaVideo["width"], "480")
-	assertEquals(koalaVideo["height"], "270")
-	assertEquals(koalaVideo["duration"], "3.366667")
-	assertEquals(koalaVideo["bit_rate"], "170549")
-	assertEquals(koalaVideo["codec_name"], "h264")
+	assertEquals(koalaVideo[0]["width"], "480")
+	assertEquals(koalaVideo[0]["height"], "270")
+	assertEquals(koalaVideo[0]["duration"], "3.366667")
+	assertEquals(koalaVideo[0]["bit_rate"], "170549")
+	assertEquals(koalaVideo[0]["codec_name"], "h264")
 	koalaAudio, err = ffprobe("test/koala-noaudio.mp4", "a")
 	if err != nil {
 		panic(err)
@@ -197,7 +198,7 @@ func TestFFprobe(t *testing.T) {
 func TestDeviceParsingWindows(t *testing.T) {
 	// Sample string taken from FFmpeg wiki:
 	data := parseDevices(
-		[]byte(`ffmpeg version N-45279-g6b86dd5... --enable-runtime-cpudetect
+		`ffmpeg version N-45279-g6b86dd5... --enable-runtime-cpudetect
   libavutil      51. 74.100 / 51. 74.100
   libavcodec     54. 65.100 / 54. 65.100
   libavformat    54. 31.100 / 54. 31.100
@@ -212,7 +213,6 @@ func TestDeviceParsingWindows(t *testing.T) {
 [dshow @ 03ACF580]  "Internal Microphone (Conexant 2"
 [dshow @ 03ACF580]  "virtual-audio-capturer"
 dummy: Immediate exit requested`,
-		),
 	)
 
 	assertEquals(data[0], "Integrated Camera")

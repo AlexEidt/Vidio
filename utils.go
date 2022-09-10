@@ -1,6 +1,7 @@
 package vidio
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -39,7 +40,7 @@ func installed(program string) error {
 }
 
 // Runs ffprobe on the given file and returns a map of the metadata.
-func ffprobe(filename, stype string) (map[string]string, error) {
+func ffprobe(filename, stype string) ([]map[string]string, error) {
 	// "stype" is stream stype. "v" for video, "a" for audio.
 	// Extract video information with ffprobe.
 	cmd := exec.Command(
@@ -60,11 +61,11 @@ func ffprobe(filename, stype string) (map[string]string, error) {
 		return nil, err
 	}
 	// Read ffprobe output from Stdout.
-	buffer := make([]byte, 2<<10)
-	total := 0
+	builder := bytes.Buffer{}
+	buffer := make([]byte, 1024)
 	for {
-		n, err := pipe.Read(buffer[total:])
-		total += n
+		n, err := pipe.Read(buffer)
+		builder.Write(buffer[:n])
 		if err == io.EOF {
 			break
 		}
@@ -75,16 +76,24 @@ func ffprobe(filename, stype string) (map[string]string, error) {
 	}
 
 	// Parse ffprobe output to fill in video data.
-	data := make(map[string]string)
-	for _, line := range strings.Split(string(buffer[:total]), "|") {
-		if strings.Contains(line, "=") {
-			keyValue := strings.Split(line, "=")
-			if _, ok := data[keyValue[0]]; !ok {
-				data[keyValue[0]] = keyValue[1]
+	datalist := make([]map[string]string, 0)
+	metadata := string(builder.String())
+	for _, stream := range strings.Split(metadata, "\n") {
+		if len(strings.TrimSpace(stream)) > 0 {
+			data := make(map[string]string)
+			for _, line := range strings.Split(stream, "|") {
+				if strings.Contains(line, "=") {
+					keyValue := strings.Split(line, "=")
+					if _, ok := data[keyValue[0]]; !ok {
+						data[keyValue[0]] = keyValue[1]
+					}
+				}
 			}
+			datalist = append(datalist, data)
 		}
 	}
-	return data, nil
+
+	return datalist, nil
 }
 
 // Parses the given data into a float64.
@@ -112,17 +121,16 @@ func webcam() (string, error) {
 
 // For webcam streaming on windows, ffmpeg requires a device name.
 // All device names are parsed and returned by this function.
-func parseDevices(buffer []byte) []string {
-	bufferstr := string(buffer)
+func parseDevices(buffer string) []string {
 
-	index := strings.Index(strings.ToLower(bufferstr), "directshow video device")
+	index := strings.Index(strings.ToLower(buffer), "directshow video device")
 	if index != -1 {
-		bufferstr = bufferstr[index:]
+		buffer = buffer[index:]
 	}
 
-	index = strings.Index(strings.ToLower(bufferstr), "directshow audio device")
+	index = strings.Index(strings.ToLower(buffer), "directshow audio device")
 	if index != -1 {
-		bufferstr = bufferstr[:index]
+		buffer = buffer[:index]
 	}
 
 	type Pair struct {
@@ -135,7 +143,7 @@ func parseDevices(buffer []byte) []string {
 	pairs := []Pair{}
 	// Find all device names surrounded by quotes. E.g "Windows Camera Front"
 	regex := regexp.MustCompile("\"[^\"]+\"")
-	for _, line := range strings.Split(strings.ReplaceAll(bufferstr, "\r\n", "\n"), "\n") {
+	for _, line := range strings.Split(strings.ReplaceAll(buffer, "\r\n", "\n"), "\n") {
 		if strings.Contains(strings.ToLower(line), "alternative name") {
 			match := regex.FindString(line)
 			if len(match) > 0 {
@@ -188,17 +196,19 @@ func getDevicesWindows() ([]string, error) {
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
+
 	// Read list devices from Stdout.
-	buffer := make([]byte, 2<<10)
-	total := 0
+	builder := bytes.Buffer{}
+	buffer := make([]byte, 1024)
 	for {
-		n, err := pipe.Read(buffer[total:])
-		total += n
+		n, err := pipe.Read(buffer)
+		builder.Write(buffer[:n])
 		if err == io.EOF {
 			break
 		}
 	}
+
 	cmd.Wait()
-	devices := parseDevices(buffer)
+	devices := parseDevices(builder.String())
 	return devices, nil
 }

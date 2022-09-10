@@ -11,19 +11,21 @@ import (
 )
 
 type Video struct {
-	filename    string         // Video Filename.
-	width       int            // Width of frames.
-	height      int            // Height of frames.
-	depth       int            // Depth of frames.
-	bitrate     int            // Bitrate for video encoding.
-	frames      int            // Total number of frames.
-	duration    float64        // Duration of video in seconds.
-	fps         float64        // Frames per second.
-	codec       string         // Codec used for video encoding.
-	audioCodec  string         // Codec used for audio encoding.
-	framebuffer []byte         // Raw frame data.
-	pipe        *io.ReadCloser // Stdout pipe for ffmpeg process.
-	cmd         *exec.Cmd      // ffmpeg command.
+	filename    string            // Video Filename.
+	width       int               // Width of frames.
+	height      int               // Height of frames.
+	depth       int               // Depth of frames.
+	bitrate     int               // Bitrate for video encoding.
+	frames      int               // Total number of frames.
+	duration    float64           // Duration of video in seconds.
+	fps         float64           // Frames per second.
+	codec       string            // Codec used for video encoding.
+	audioCodec  string            // Codec used for audio encoding.
+	stream      int               // Stream Index.
+	framebuffer []byte            // Raw frame data.
+	metadata    map[string]string // Video metadata.
+	pipe        *io.ReadCloser    // Stdout pipe for ffmpeg process.
+	cmd         *exec.Cmd         // ffmpeg command.
 }
 
 func (video *Video) FileName() string {
@@ -65,12 +67,24 @@ func (video *Video) Codec() string {
 	return video.codec
 }
 
+// Returns the audio codec of the first audio track (if present).
+// Can be used to check if a video has audio.
 func (video *Video) AudioCodec() string {
 	return video.audioCodec
 }
 
+// Returns the zero-indexed video stream index.
+func (video *Video) Stream() int {
+	return video.stream
+}
+
 func (video *Video) FrameBuffer() []byte {
 	return video.framebuffer
+}
+
+// Raw Metadata from ffprobe output for the video file.
+func (video *Video) MetaData() map[string]string {
+	return video.metadata
 }
 
 func (video *Video) SetFrameBuffer(buffer []byte) error {
@@ -78,14 +92,21 @@ func (video *Video) SetFrameBuffer(buffer []byte) error {
 	if len(buffer) < size {
 		return fmt.Errorf("buffer size %d is smaller than frame size %d", len(buffer), size)
 	}
-
 	video.framebuffer = buffer
 	return nil
 }
 
-// Creates a new Video struct.
-// Uses ffprobe to get video information and fills in the Video struct with this data.
 func NewVideo(filename string) (*Video, error) {
+	streams, err := NewVideoStreams(filename)
+	if streams == nil {
+		return nil, err
+	}
+
+	return streams[0], err
+}
+
+// Read all video streams from the given file.
+func NewVideoStreams(filename string) ([]*Video, error) {
 	if !exists(filename) {
 		return nil, fmt.Errorf("video file %s does not exist", filename)
 	}
@@ -111,14 +132,30 @@ func NewVideo(filename string) (*Video, error) {
 		return nil, err
 	}
 
-	video := &Video{filename: filename, depth: 3}
-
-	video.addVideoData(videoData)
-	if audioCodec, ok := audioData["codec_name"]; ok {
-		video.audioCodec = audioCodec
+	audioCodec := ""
+	if len(audioData) > 0 {
+		// Look at the first audio stream only.
+		if ac, ok := audioData[0]["codec_name"]; ok {
+			audioCodec = ac
+		}
 	}
 
-	return video, nil
+	streams := make([]*Video, len(videoData))
+	for i, data := range videoData {
+		video := &Video{
+			filename:   filename,
+			depth:      3,
+			audioCodec: audioCodec,
+			stream:     i,
+			metadata:   data,
+		}
+
+		video.addVideoData(data)
+
+		streams[i] = video
+	}
+
+	return streams, nil
 }
 
 // Adds Video data to the video struct from the ffprobe output.
@@ -135,14 +172,12 @@ func (video *Video) addVideoData(data map[string]string) {
 	if frames, ok := data["nb_frames"]; ok {
 		video.frames = int(parse(frames))
 	}
-
 	if fps, ok := data["r_frame_rate"]; ok {
 		split := strings.Split(fps, "/")
 		if len(split) == 2 && split[0] != "" && split[1] != "" {
 			video.fps = parse(split[0]) / parse(split[1])
 		}
 	}
-
 	if bitrate, ok := data["bit_rate"]; ok {
 		video.bitrate = int(parse(bitrate))
 	}
@@ -164,6 +199,7 @@ func (video *Video) init() error {
 		"-loglevel", "quiet",
 		"-pix_fmt", "rgb24",
 		"-vcodec", "rawvideo",
+		"-map", fmt.Sprintf("0:v:%d", video.stream),
 		"-",
 	)
 

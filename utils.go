@@ -77,7 +77,7 @@ func ffprobe(filename, stype string) ([]map[string]string, error) {
 
 	// Parse ffprobe output to fill in video data.
 	datalist := make([]map[string]string, 0)
-	metadata := string(builder.String())
+	metadata := builder.String()
 	for _, stream := range strings.Split(metadata, "\n") {
 		if len(strings.TrimSpace(stream)) > 0 {
 			data := make(map[string]string)

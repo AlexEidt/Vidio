@@ -280,6 +280,7 @@ func (writer *VideoWriter) init() error {
 		return err
 	}
 	writer.pipe = &pipe
+
 	if err := cmd.Start(); err != nil {
 		return err
 	}
@@ -295,6 +296,7 @@ func (writer *VideoWriter) Write(frame []byte) error {
 			return err
 		}
 	}
+
 	total := 0
 	for total < len(frame) {
 		n, err := (*writer.pipe).Write(frame[total:])
@@ -303,6 +305,7 @@ func (writer *VideoWriter) Write(frame []byte) error {
 		}
 		total += n
 	}
+
 	return nil
 }
 

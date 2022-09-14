@@ -209,6 +209,7 @@ func (video *Video) init() error {
 		return err
 	}
 	video.pipe = &pipe
+
 	if err := cmd.Start(); err != nil {
 		return err
 	}
@@ -229,6 +230,7 @@ func (video *Video) Read() bool {
 			return false
 		}
 	}
+
 	total := 0
 	for total < video.width*video.height*video.depth {
 		n, err := (*video.pipe).Read(video.framebuffer[total:])
@@ -238,6 +240,7 @@ func (video *Video) Read() bool {
 		}
 		total += n
 	}
+
 	return true
 }
 

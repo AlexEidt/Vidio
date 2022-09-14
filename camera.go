@@ -58,7 +58,6 @@ func (camera *Camera) SetFrameBuffer(buffer []byte) error {
 	if len(buffer) < size {
 		return fmt.Errorf("buffer size %d is smaller than frame size %d", len(buffer), size)
 	}
-
 	camera.framebuffer = buffer
 	return nil
 }
@@ -95,6 +94,7 @@ func NewCamera(stream int) (*Camera, error) {
 	if err := camera.getCameraData(device); err != nil {
 		return nil, err
 	}
+
 	return camera, nil
 }
 
@@ -148,18 +148,21 @@ func (camera *Camera) getCameraData(device string) error {
 	if err != nil {
 		return err
 	}
+
 	cmd := exec.Command(
 		"ffmpeg",
 		"-hide_banner",
 		"-f", webcamDeviceName,
 		"-i", device,
 	)
+
 	// The command will fail since we do not give a file to write to, therefore
 	// it will write the meta data to Stderr.
 	pipe, err := cmd.StderrPipe()
 	if err != nil {
 		return err
 	}
+
 	// Start the command.
 	if err := cmd.Start(); err != nil {
 		return err
@@ -233,11 +236,13 @@ func (camera *Camera) Read() bool {
 			return false
 		}
 	}
+
 	total := 0
 	for total < camera.width*camera.height*camera.depth {
 		n, _ := (*camera.pipe).Read(camera.framebuffer[total:])
 		total += n
 	}
+
 	return true
 }
 

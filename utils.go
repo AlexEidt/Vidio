@@ -29,13 +29,11 @@ func exists(filename string) bool {
 // Checks if the given program is installed.
 func installed(program string) error {
 	cmd := exec.Command(program, "-version")
-	errmsg := fmt.Errorf("%s is not installed", program)
-	if err := cmd.Start(); err != nil {
-		return errmsg
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%s is not installed", program)
 	}
-	if err := cmd.Wait(); err != nil {
-		return errmsg
-	}
+
 	return nil
 }
 
@@ -60,6 +58,7 @@ func ffprobe(filename, stype string) ([]map[string]string, error) {
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
+
 	// Read ffprobe output from Stdout.
 	builder := bytes.Buffer{}
 	buffer := make([]byte, 1024)
@@ -70,6 +69,7 @@ func ffprobe(filename, stype string) ([]map[string]string, error) {
 			break
 		}
 	}
+
 	// Wait for ffprobe command to complete.
 	if err := cmd.Wait(); err != nil {
 		return nil, err
@@ -122,7 +122,6 @@ func webcam() (string, error) {
 // For webcam streaming on windows, ffmpeg requires a device name.
 // All device names are parsed and returned by this function.
 func parseDevices(buffer string) []string {
-
 	index := strings.Index(strings.ToLower(buffer), "directshow video device")
 	if index != -1 {
 		buffer = buffer[index:]
@@ -189,10 +188,12 @@ func getDevicesWindows() ([]string, error) {
 		"-f", "dshow",
 		"-i", "dummy",
 	)
+
 	pipe, err := cmd.StderrPipe()
 	if err != nil {
 		return nil, err
 	}
+
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
@@ -209,6 +210,7 @@ func getDevicesWindows() ([]string, error) {
 	}
 
 	cmd.Wait()
+
 	devices := parseDevices(builder.String())
 	return devices, nil
 }

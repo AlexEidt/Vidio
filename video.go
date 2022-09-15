@@ -17,11 +17,11 @@ type Video struct {
 	depth       int               // Depth of frames.
 	bitrate     int               // Bitrate for video encoding.
 	frames      int               // Total number of frames.
+	stream      int               // Stream Index.
 	duration    float64           // Duration of video in seconds.
 	fps         float64           // Frames per second.
 	codec       string            // Codec used for video encoding.
-	audioCodec  string            // Codec used for audio encoding.
-	stream      int               // Stream Index.
+	hasaudio    bool              // Flag storing whether file has Audio.
 	framebuffer []byte            // Raw frame data.
 	metadata    map[string]string // Video metadata.
 	pipe        *io.ReadCloser    // Stdout pipe for ffmpeg process.
@@ -55,6 +55,11 @@ func (video *Video) Frames() int {
 	return video.frames
 }
 
+// Returns the zero-indexed video stream index.
+func (video *Video) Stream() int {
+	return video.stream
+}
+
 func (video *Video) Duration() float64 {
 	return video.duration
 }
@@ -67,15 +72,8 @@ func (video *Video) Codec() string {
 	return video.codec
 }
 
-// Returns the audio codec of the first audio track (if present).
-// Can be used to check if a video has audio.
-func (video *Video) AudioCodec() string {
-	return video.audioCodec
-}
-
-// Returns the zero-indexed video stream index.
-func (video *Video) Stream() int {
-	return video.stream
+func (video *Video) HasAudio() bool {
+	return video.hasaudio
 }
 
 func (video *Video) FrameBuffer() []byte {
@@ -132,22 +130,14 @@ func NewVideoStreams(filename string) ([]*Video, error) {
 		return nil, err
 	}
 
-	audioCodec := ""
-	if len(audioData) > 0 {
-		// Look at the first audio stream only.
-		if ac, ok := audioData[0]["codec_name"]; ok {
-			audioCodec = ac
-		}
-	}
-
 	streams := make([]*Video, len(videoData))
 	for i, data := range videoData {
 		video := &Video{
-			filename:   filename,
-			depth:      3,
-			audioCodec: audioCodec,
-			stream:     i,
-			metadata:   data,
+			filename: filename,
+			depth:    3,
+			stream:   i,
+			hasaudio: len(audioData) > 0,
+			metadata: data,
 		}
 
 		video.addVideoData(data)

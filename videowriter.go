@@ -12,41 +12,40 @@ import (
 )
 
 type VideoWriter struct {
-	filename   string          // Output filename.
-	audio      string          // Audio filename.
-	width      int             // Frame width.
-	height     int             // Frame height.
-	bitrate    int             // Output video bitrate.
-	loop       int             // Number of times for GIF to loop.
-	delay      int             // Delay of final frame of GIF. Default -1 (same delay as previous frame).
-	macro      int             // Macroblock size for determining how to resize frames for codecs.
-	fps        float64         // Frames per second for output video. Default 25.
-	quality    float64         // Used if bitrate not given. Default 0.5.
-	codec      string          // Codec to encode video with. Default libx264.
-	format     string          // Output format. Default rgb24.
-	audioCodec string          // Codec to encode audio with. Default aac.
-	pipe       *io.WriteCloser // Stdout pipe of ffmpeg process.
-	cmd        *exec.Cmd       // ffmpeg command.
+	filename string          // Output filename.
+	audio    string          // Extra stream data filename.
+	width    int             // Frame width.
+	height   int             // Frame height.
+	bitrate  int             // Output video bitrate.
+	loop     int             // Number of times for GIF to loop.
+	delay    int             // Delay of final frame of GIF. Default -1 (same delay as previous frame).
+	macro    int             // Macroblock size for determining how to resize frames for codecs.
+	fps      float64         // Frames per second for output video. Default 25.
+	quality  float64         // Used if bitrate not given. Default 0.5.
+	codec    string          // Codec to encode video with. Default libx264.
+	format   string          // Output format. Default rgb24.
+	pipe     *io.WriteCloser // Stdout pipe of ffmpeg process.
+	cmd      *exec.Cmd       // ffmpeg command.
 }
 
 // Optional parameters for VideoWriter.
 type Options struct {
-	Bitrate    int     // Bitrate.
-	Loop       int     // For GIFs only. -1=no loop, 0=infinite loop, >0=number of loops.
-	Delay      int     // Delay for final frame of GIFs.
-	Macro      int     // Macroblock size for determining how to resize frames for codecs.
-	FPS        float64 // Frames per second for output video.
-	Quality    float64 // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst.
-	Codec      string  // Codec for video.
-	Format     string  // Pixel Format for video. Default "rgb24".
-	Audio      string  // File path for audio. If no audio, audio="".
-	AudioCodec string  // Codec for audio.
+	Bitrate int     // Bitrate.
+	Loop    int     // For GIFs only. -1=no loop, 0=infinite loop, >0=number of loops.
+	Delay   int     // Delay for final frame of GIFs.
+	Macro   int     // Macroblock size for determining how to resize frames for codecs.
+	FPS     float64 // Frames per second for output video.
+	Quality float64 // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst.
+	Codec   string  // Codec for video.
+	Format  string  // Pixel Format for video. Default "rgb24".
+	Audio   string  // File path for extra stream data.
 }
 
 func (writer *VideoWriter) FileName() string {
 	return writer.filename
 }
 
+// File used to fill in extra stream data.
 func (writer *VideoWriter) Audio() string {
 	return writer.audio
 }
@@ -91,10 +90,6 @@ func (writer *VideoWriter) Format() string {
 	return writer.format
 }
 
-func (writer *VideoWriter) AudioCodec() string {
-	return writer.audioCodec
-}
-
 // Creates a new VideoWriter struct with default values from the Options struct.
 func NewVideoWriter(filename string, width, height int, options *Options) (*VideoWriter, error) {
 	// Check if ffmpeg is installed on the users machine.
@@ -102,15 +97,16 @@ func NewVideoWriter(filename string, width, height int, options *Options) (*Vide
 		return nil, err
 	}
 
-	writer := &VideoWriter{filename: filename}
-
 	if options == nil {
 		options = &Options{}
 	}
 
-	writer.width = width
-	writer.height = height
-	writer.bitrate = options.Bitrate
+	writer := &VideoWriter{
+		filename: filename,
+		width:    width,
+		height:   height,
+		bitrate:  options.Bitrate,
+	}
 
 	// Default Parameter options logic from:
 	// https://github.com/imageio/imageio-ffmpeg/blob/master/imageio_ffmpeg/_io.py#L268.
@@ -161,23 +157,9 @@ func NewVideoWriter(filename string, width, height int, options *Options) (*Vide
 
 	if options.Audio != "" {
 		if !exists(options.Audio) {
-			return nil, fmt.Errorf("audio file %s does not exist", options.Audio)
+			return nil, fmt.Errorf("file %s does not exist", options.Audio)
 		}
-
-		audioData, err := ffprobe(options.Audio, "a")
-		if err != nil {
-			return nil, err
-		} else if len(audioData) == 0 {
-			return nil, fmt.Errorf("given audio file %s has no audio", options.Audio)
-		}
-
 		writer.audio = options.Audio
-
-		if options.AudioCodec == "" {
-			writer.audioCodec = "aac"
-		} else {
-			writer.audioCodec = options.AudioCodec
-		}
 	}
 
 	return writer, nil
@@ -202,12 +184,22 @@ func (writer *VideoWriter) init() error {
 
 	gif := strings.HasSuffix(strings.ToLower(writer.filename), ".gif")
 
-	if writer.audio == "" || gif {
-		command = append(command, "-an") // No audio.
-	} else {
+	// Assumes "writer.file" is a container format.
+	// gif check is included since they are a common format.
+	if writer.audio != "" && !gif {
 		command = append(
 			command,
 			"-i", writer.audio,
+			"-map", "0:v:0",
+			"-map", "1:a?", // Add Audio streams if present.
+			"-c:a", "copy",
+			"-map", "1:s?", // Add Subtitle streams if present.
+			"-c:s", "copy",
+			"-map", "1:d?", // Add Data streams if present.
+			"-c:d", "copy",
+			"-map", "1:t?", // Add Attachments streams if present.
+			"-c:t", "copy",
+			"-shortest", // Cut longest streams to match audio duration.
 		)
 	}
 
@@ -259,16 +251,6 @@ func (writer *VideoWriter) init() error {
 				"-vf", fmt.Sprintf("scale=%d:%d", width, height),
 			)
 		}
-	}
-
-	// If audio was included, then specify video and audio channels.
-	if writer.audio != "" && !gif {
-		command = append(
-			command,
-			"-acodec", writer.audioCodec,
-			"-map", "0:v:0",
-			"-map", "1:a:0",
-		)
 	}
 
 	command = append(command, writer.filename)

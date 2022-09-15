@@ -45,7 +45,6 @@ func TestVideoMetaData(t *testing.T) {
 	assertEquals(video.duration, 3.366667)
 	assertEquals(video.fps, float64(30))
 	assertEquals(video.codec, "h264")
-	assertEquals(video.audioCodec, "aac")
 	assertEquals(video.stream, 0)
 	assertEquals(len(video.framebuffer), 0)
 
@@ -83,7 +82,7 @@ func TestVideoFrame(t *testing.T) {
 }
 
 func TestVideoWriting(t *testing.T) {
-	testWriting := func(input, output string, audio bool) {
+	testWriting := func(input, output string) {
 		video, err := NewVideo(input)
 		if err != nil {
 			panic(err)
@@ -93,8 +92,8 @@ func TestVideoWriting(t *testing.T) {
 			Bitrate: video.Bitrate(),
 			Codec:   video.Codec(),
 		}
-		if audio {
-			options.Audio = input
+		if video.HasAudio() {
+			options.Audio = video.FileName()
 		}
 
 		writer, err := NewVideoWriter(output, video.width, video.height, &options)
@@ -112,9 +111,9 @@ func TestVideoWriting(t *testing.T) {
 		os.Remove(output)
 	}
 
-	testWriting("test/koala.mp4", "test/koala-out.mp4", true)
+	testWriting("test/koala.mp4", "test/koala-out.mp4")
 	fmt.Println("Video Writing (with Audio) Test Passed")
-	testWriting("test/koala-noaudio.mp4", "test/koala-noaudio-out.mp4", false)
+	testWriting("test/koala-noaudio.mp4", "test/koala-noaudio-out.mp4")
 	fmt.Println("Video Writing (without Audio) Test Passed")
 }
 

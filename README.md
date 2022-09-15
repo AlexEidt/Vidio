@@ -28,11 +28,11 @@ Height() int
 Depth() int
 Bitrate() int
 Frames() int
+Stream() int
 Duration() float64
 FPS() float64
 Codec() string
-AudioCodec() string
-Stream() int
+HasAudio() bool
 FrameBuffer() []byte
 MetaData() map[string]string
 SetFrameBuffer(buffer []byte) error
@@ -71,6 +71,7 @@ The `VideoWriter` is used to write frames to a video file. The only required par
 vidio.NewVideoWriter(filename string, width, height int, options *vidio.Options) (*vidio.VideoWriter, error)
 
 FileName() string
+Audio() string
 Width() int
 Height() int
 Bitrate() int
@@ -81,7 +82,6 @@ FPS() float64
 Quality() float64
 Codec() string
 Format() string
-AudioCodec() string
 
 Write(frame []byte) error
 Close()
@@ -89,18 +89,21 @@ Close()
 
 ```go
 type Options struct {
-	Bitrate    int     // Bitrate.
-	Loop       int     // For GIFs only. -1=no loop, 0=infinite loop, >0=number of loops.
-	Delay      int     // Delay for final frame of GIFs.
-	Macro      int     // Macroblock size for determining how to resize frames for codecs.
-	FPS        float64 // Frames per second for output video.
-	Quality    float64 // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst.
-	Codec      string  // Codec for video.
-	Format     string  // Pixel Format for video. Default "rgb24".
-	Audio      string  // File path for audio. If no audio, audio="".
-	AudioCodec string  // Codec for audio.
+	Bitrate int     // Bitrate.
+	Loop    int     // For GIFs only. -1=no loop, 0=infinite loop, >0=number of loops.
+	Delay   int     // Delay for final frame of GIFs.
+	Macro   int     // Macroblock size for determining how to resize frames for codecs.
+	FPS     float64 // Frames per second for output video.
+	Quality float64 // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst.
+	Codec   string  // Codec for video.
+	Format  string  // Pixel Format for video. Default "rgb24".
+	Audio   string  // File path for extra stream data.
 }
 ```
+
+The `Options.Audio` parameter is intended for users who wish to process a video stream and keep the audio. Instead of having to process the video and store in a file and then combine with the original audio later, the user can simply pass in the original file path via the `Options.Video` parameter. This will combine the video with all other streams in the given file (Audio, Subtitle, Data, and Attachments Streams) and will cut all streams to be the same length. Note that `vidio` is not a audio/video editing library.
+
+Note that this means that adding extra stream data from a file will only work if the filename being written to is a container format.
 
 ## Images
 
@@ -121,8 +124,8 @@ options := vidio.Options{
 	FPS: video.FPS(),
 	Bitrate: video.Bitrate(),
 }
-if video.AudioCodec() != "" {
-	options.Audio = "input.mp4"
+if video.HasAudio() {
+	options.Audio = video.FileName()
 }
 
 writer, _ := vidio.NewVideoWriter("output.mp4", video.Width(), video.Height(), &options)

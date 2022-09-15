@@ -32,7 +32,7 @@ Stream() int
 Duration() float64
 FPS() float64
 Codec() string
-HasAudio() bool
+HasStreams() bool
 FrameBuffer() []byte
 MetaData() map[string]string
 SetFrameBuffer(buffer []byte) error
@@ -45,7 +45,7 @@ If all frames have been read, `video` will be closed automatically. If not all f
 
 ## `Camera`
 
-The `Camera` can read from any cameras on the device running Vidio. It takes in the stream index. On most machines the webcam device has index 0.
+The `Camera` can read from any cameras on the device running `Vidio`. It takes in the stream index. On most machines the webcam device has index 0.
 
 ```go
 vidio.NewCamera(stream int) (*vidio.Camera, error)
@@ -71,7 +71,7 @@ The `VideoWriter` is used to write frames to a video file. The only required par
 vidio.NewVideoWriter(filename string, width, height int, options *vidio.Options) (*vidio.VideoWriter, error)
 
 FileName() string
-Audio() string
+StreamFile() string
 Width() int
 Height() int
 Bitrate() int
@@ -89,25 +89,25 @@ Close()
 
 ```go
 type Options struct {
-	Bitrate int     // Bitrate.
-	Loop    int     // For GIFs only. -1=no loop, 0=infinite loop, >0=number of loops.
-	Delay   int     // Delay for final frame of GIFs.
-	Macro   int     // Macroblock size for determining how to resize frames for codecs.
-	FPS     float64 // Frames per second for output video.
-	Quality float64 // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst.
-	Codec   string  // Codec for video.
-	Format  string  // Pixel Format for video. Default "rgb24".
-	Audio   string  // File path for extra stream data.
+	Bitrate    int     // Bitrate.
+	Loop       int     // For GIFs only. -1=no loop, 0=infinite loop, >0=number of loops.
+	Delay      int     // Delay for final frame of GIFs.
+	Macro      int     // Macroblock size for determining how to resize frames for codecs.
+	FPS        float64 // Frames per second for output video.
+	Quality    float64 // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst.
+	Codec      string  // Codec for video.
+	Format     string  // Pixel Format for video. Default "rgb24".
+	StreamFile string  // File path for extra stream data.
 }
 ```
 
-The `Options.Audio` parameter is intended for users who wish to process a video stream and keep the audio. Instead of having to process the video and store in a file and then combine with the original audio later, the user can simply pass in the original file path via the `Options.Video` parameter. This will combine the video with all other streams in the given file (Audio, Subtitle, Data, and Attachments Streams) and will cut all streams to be the same length. Note that `vidio` is not a audio/video editing library.
+The `Options.StreamFile` parameter is intended for users who wish to process a video stream and keep the audio (or other streams). Instead of having to process the video and store in a file and then combine with the original audio later, the user can simply pass in the original file path via the `Options.StreamFile` parameter. This will combine the video with all other streams in the given file (Audio, Subtitle, Data, and Attachments Streams) and will cut all streams to be the same length. **Note that `Vidio` is not a audio/video editing library.**
 
-Note that this means that adding extra stream data from a file will only work if the filename being written to is a container format.
+This means that adding extra stream data from a file will only work if the filename being written to is a container format.
 
 ## Images
 
-Vidio provides some convenience functions for reading and writing to images using an array of bytes. Currently, only `png` and `jpeg` formats are supported. When reading images, an optional `buffer` can be passed in to avoid array reallocation.
+`Vidio` provides some convenience functions for reading and writing to images using an array of bytes. Currently, only `png` and `jpeg` formats are supported. When reading images, an optional `buffer` can be passed in to avoid array reallocation.
 
 ```go
 Read(filename string, buffer ...[]byte) (int, int, []byte, error)
@@ -124,8 +124,8 @@ options := vidio.Options{
 	FPS: video.FPS(),
 	Bitrate: video.Bitrate(),
 }
-if video.HasAudio() {
-	options.Audio = video.FileName()
+if video.HasStreams() {
+	options.StreamFile = video.FileName()
 }
 
 writer, _ := vidio.NewVideoWriter("output.mp4", video.Width(), video.Height(), &options)

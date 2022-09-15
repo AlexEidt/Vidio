@@ -46,6 +46,7 @@ func TestVideoMetaData(t *testing.T) {
 	assertEquals(video.fps, float64(30))
 	assertEquals(video.codec, "h264")
 	assertEquals(video.stream, 0)
+	assertEquals(video.hasstreams, true)
 	assertEquals(len(video.framebuffer), 0)
 
 	if video.pipe != nil {
@@ -92,8 +93,8 @@ func TestVideoWriting(t *testing.T) {
 			Bitrate: video.Bitrate(),
 			Codec:   video.Codec(),
 		}
-		if video.HasAudio() {
-			options.Audio = video.FileName()
+		if video.HasStreams() {
+			options.StreamFile = video.FileName()
 		}
 
 		writer, err := NewVideoWriter(output, video.width, video.height, &options)

@@ -21,7 +21,7 @@ type Video struct {
 	duration    float64           // Duration of video in seconds.
 	fps         float64           // Frames per second.
 	codec       string            // Codec used for video encoding.
-	hasaudio    bool              // Flag storing whether file has Audio.
+	hasstreams  bool              // Flag storing whether file has additional data streams.
 	framebuffer []byte            // Raw frame data.
 	metadata    map[string]string // Video metadata.
 	pipe        *io.ReadCloser    // Stdout pipe for ffmpeg process.
@@ -72,8 +72,9 @@ func (video *Video) Codec() string {
 	return video.codec
 }
 
-func (video *Video) HasAudio() bool {
-	return video.hasaudio
+// Returns true if file has any audio, subtitle, data or attachment streams.
+func (video *Video) HasStreams() bool {
+	return video.hasstreams
 }
 
 func (video *Video) FrameBuffer() []byte {
@@ -125,19 +126,27 @@ func NewVideoStreams(filename string) ([]*Video, error) {
 		return nil, fmt.Errorf("no video data found in %s", filename)
 	}
 
-	audioData, err := ffprobe(filename, "a")
-	if err != nil {
-		return nil, err
+	// Loop over all stream types. a: Audio, s: Subtitle, d: Data, t: Attachments
+	hasstream := false
+	for _, c := range "asdt" {
+		data, err := ffprobe(filename, string(c))
+		if err != nil {
+			return nil, err
+		}
+		if len(data) > 0 {
+			hasstream = true
+			break
+		}
 	}
 
 	streams := make([]*Video, len(videoData))
 	for i, data := range videoData {
 		video := &Video{
-			filename: filename,
-			depth:    3,
-			stream:   i,
-			hasaudio: len(audioData) > 0,
-			metadata: data,
+			filename:   filename,
+			depth:      3,
+			stream:     i,
+			hasstreams: hasstream,
+			metadata:   data,
 		}
 
 		video.addVideoData(data)

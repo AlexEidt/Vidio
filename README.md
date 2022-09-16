@@ -157,14 +157,14 @@ for webcam.Read() && count < 1000 {
 Create a gif from a series of `png` files enumerated from 1 to 10 that loops continuously with a final frame delay of 1000 centiseconds.
 
 ```go
-w, h, img, _ := vidio.Read("1.png") // Get frame dimensions from first image
+w, h, _, _ := vidio.Read("1.png") // Get frame dimensions from first image
 
 options := vidio.Options{FPS: 1, Loop: 0, Delay: 1000}
 gif, _ := vidio.NewVideoWriter("output.gif", w, h, &options)
 defer gif.Close()
 
 for i := 1; i <= 10; i++ {
-	w, h, img, _ := vidio.Read(strconv.Itoa(i)+".png")
+	w, h, img, _ := vidio.Read(fmt.Sprintf("%d.png", i))
 	gif.Write(img)
 }
 ```

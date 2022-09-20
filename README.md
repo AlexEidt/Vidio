@@ -2,7 +2,7 @@
 
 A simple Video I/O library written in Go. This library relies on [FFmpeg](https://www.ffmpeg.org/), and [FFProbe](https://www.ffmpeg.org/) which must be downloaded before usage and added to the system path.
 
-All frames are encoded and decoded in 8-bit RGB format.
+All frames are encoded and decoded in 8-bit RGBA format.
 
 For Audio I/O using FFmpeg, see the [`aio`](https://github.com/AlexEidt/aio) project.
 
@@ -16,7 +16,7 @@ go get github.com/AlexEidt/Vidio
 
 The `Video` struct stores data about a video file you give it. The code below shows an example of sequentially reading the frames of the given video.
 
-Calling the `Read()` function will fill in the `Video` struct `framebuffer` with the next frame data as 8-bit RGB data, stored in a flattened byte array in row-major order where each pixel is represented by three consecutive bytes representing the R, G and B component of that pixel.
+Calling the `Read()` function will fill in the `Video` struct `framebuffer` with the next frame data as 8-bit RGBA data, stored in a flattened byte array in row-major order where each pixel is represented by four consecutive bytes representing the R, G, B and A components of that pixel. Note that the A (alpha) component will always be 255.
 
 ```go
 vidio.NewVideo(filename string) (*vidio.Video, error)
@@ -81,7 +81,6 @@ Macro() int
 FPS() float64
 Quality() float64
 Codec() string
-Format() string
 
 Write(frame []byte) error
 Close()
@@ -96,7 +95,6 @@ type Options struct {
 	FPS        float64 // Frames per second for output video.
 	Quality    float64 // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst.
 	Codec      string  // Codec for video.
-	Format     string  // Pixel Format for video. Default "rgb24".
 	StreamFile string  // File path for extra stream data.
 }
 ```

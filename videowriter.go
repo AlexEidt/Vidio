@@ -23,7 +23,6 @@ type VideoWriter struct {
 	fps        float64         // Frames per second for output video. Default 25.
 	quality    float64         // Used if bitrate not given. Default 0.5.
 	codec      string          // Codec to encode video with. Default libx264.
-	format     string          // Output format. Default rgb24.
 	pipe       *io.WriteCloser // Stdout pipe of ffmpeg process.
 	cmd        *exec.Cmd       // ffmpeg command.
 }
@@ -37,7 +36,6 @@ type Options struct {
 	FPS        float64 // Frames per second for output video.
 	Quality    float64 // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst.
 	Codec      string  // Codec for video.
-	Format     string  // Pixel Format for video. Default "rgb24".
 	StreamFile string  // File path for extra stream data.
 }
 
@@ -84,10 +82,6 @@ func (writer *VideoWriter) Quality() float64 {
 
 func (writer *VideoWriter) Codec() string {
 	return writer.codec
-}
-
-func (writer *VideoWriter) Format() string {
-	return writer.format
 }
 
 // Creates a new VideoWriter struct with default values from the Options struct.
@@ -149,12 +143,6 @@ func NewVideoWriter(filename string, width, height int, options *Options) (*Vide
 		writer.codec = options.Codec
 	}
 
-	if options.Format == "" {
-		writer.format = "rgb24"
-	} else {
-		writer.format = options.Format
-	}
-
 	if options.StreamFile != "" {
 		if !exists(options.StreamFile) {
 			return nil, fmt.Errorf("file %s does not exist", options.StreamFile)
@@ -177,7 +165,7 @@ func (writer *VideoWriter) init() error {
 		"-f", "rawvideo",
 		"-vcodec", "rawvideo",
 		"-s", fmt.Sprintf("%dx%d", writer.width, writer.height), // frame w x h.
-		"-pix_fmt", writer.format,
+		"-pix_fmt", "rgba",
 		"-r", fmt.Sprintf("%.02f", writer.fps), // frames per second.
 		"-i", "-", // The input comes from stdin.
 	}
@@ -206,7 +194,7 @@ func (writer *VideoWriter) init() error {
 	command = append(
 		command,
 		"-vcodec", writer.codec,
-		"-pix_fmt", "yuv420p", // Output is 8-bit RGB, no alpha.
+		"-pix_fmt", "yuv420p", // Output is 8-bit RGB, ignore alpha.
 	)
 
 	// Code from the imageio-ffmpeg project.
@@ -246,6 +234,8 @@ func (writer *VideoWriter) init() error {
 			if writer.height%writer.macro > 0 {
 				height += writer.macro - (writer.height % writer.macro)
 			}
+			writer.width = width
+			writer.height = height
 			command = append(
 				command,
 				"-vf", fmt.Sprintf("scale=%d:%d", width, height),

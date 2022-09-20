@@ -11,7 +11,7 @@ import (
 	"image/png"
 )
 
-// Reads an image from a file. Currently only supports png and jpeg.
+// Reads an image into an rgba byte buffer from a file. Currently only supports png and jpeg.
 func Read(filename string, buffer ...[]byte) (int, int, []byte, error) {
 	f, err := os.Open(filename)
 	if err != nil {
@@ -25,7 +25,7 @@ func Read(filename string, buffer ...[]byte) (int, int, []byte, error) {
 	}
 
 	bounds := image.Bounds().Max
-	size := bounds.X * bounds.Y * 3
+	size := bounds.X * bounds.Y * 4
 
 	var data []byte
 	if len(buffer) > 0 {
@@ -45,13 +45,14 @@ func Read(filename string, buffer ...[]byte) (int, int, []byte, error) {
 			data[index+0] = byte(r)
 			data[index+1] = byte(g)
 			data[index+2] = byte(b)
-			index += 3
+			data[index+3] = 255
+			index += 4
 		}
 	}
 	return bounds.X, bounds.Y, data, nil
 }
 
-// Writes an image to a file. Currently only supports png and jpeg.
+// Writes a rgba byte buffer to a file. Currently only supports png and jpeg.
 func Write(filename string, width, height int, buffer []byte) error {
 	f, err := os.Create(filename)
 	if err != nil {
@@ -63,9 +64,9 @@ func Write(filename string, width, height int, buffer []byte) error {
 	index := 0
 	for h := 0; h < height; h++ {
 		for w := 0; w < width; w++ {
-			r, g, b := buffer[index], buffer[index+1], buffer[index+2]
+			r, g, b := buffer[index+0], buffer[index+1], buffer[index+2]
 			image.Set(w, h, color.RGBA{r, g, b, 255})
-			index += 3
+			index += 4
 		}
 	}
 

@@ -143,7 +143,7 @@ func NewVideoStreams(filename string) ([]*Video, error) {
 	for i, data := range videoData {
 		video := &Video{
 			filename:   filename,
-			depth:      3,
+			depth:      4,
 			stream:     i,
 			hasstreams: hasstream,
 			metadata:   data,
@@ -190,13 +190,13 @@ func (video *Video) addVideoData(data map[string]string) {
 func (video *Video) init() error {
 	// If user exits with Ctrl+C, stop ffmpeg process.
 	video.cleanup()
-	// ffmpeg command to pipe video data to stdout in 8-bit RGB format.
+	// ffmpeg command to pipe video data to stdout in 8-bit RGBA format.
 	cmd := exec.Command(
 		"ffmpeg",
 		"-i", video.filename,
 		"-f", "image2pipe",
 		"-loglevel", "quiet",
-		"-pix_fmt", "rgb24",
+		"-pix_fmt", "rgba",
 		"-vcodec", "rawvideo",
 		"-map", fmt.Sprintf("0:v:%d", video.stream),
 		"-",

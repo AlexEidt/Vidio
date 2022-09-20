@@ -39,7 +39,7 @@ func TestVideoMetaData(t *testing.T) {
 	assertEquals(video.filename, "test/koala.mp4")
 	assertEquals(video.width, 480)
 	assertEquals(video.height, 270)
-	assertEquals(video.depth, 3)
+	assertEquals(video.depth, 4)
 	assertEquals(video.bitrate, 170549)
 	assertEquals(video.frames, 101)
 	assertEquals(video.duration, 3.366667)
@@ -67,17 +67,23 @@ func TestVideoFrame(t *testing.T) {
 	defer video.Close()
 
 	video.Read()
-	// [203 222 134 203 222 134 203 222 134 203]
+	// [203 222 134 255 203 222 134 255 203 222 134 255 203]
 	assertEquals(video.framebuffer[0], uint8(203))
 	assertEquals(video.framebuffer[1], uint8(222))
 	assertEquals(video.framebuffer[2], uint8(134))
-	assertEquals(video.framebuffer[3], uint8(203))
-	assertEquals(video.framebuffer[4], uint8(222))
-	assertEquals(video.framebuffer[5], uint8(134))
-	assertEquals(video.framebuffer[6], uint8(203))
-	assertEquals(video.framebuffer[7], uint8(222))
-	assertEquals(video.framebuffer[8], uint8(134))
-	assertEquals(video.framebuffer[9], uint8(203))
+	assertEquals(video.framebuffer[3], uint8(255))
+
+	assertEquals(video.framebuffer[4], uint8(203))
+	assertEquals(video.framebuffer[5], uint8(222))
+	assertEquals(video.framebuffer[6], uint8(134))
+	assertEquals(video.framebuffer[7], uint8(255))
+
+	assertEquals(video.framebuffer[8], uint8(203))
+	assertEquals(video.framebuffer[9], uint8(222))
+	assertEquals(video.framebuffer[10], uint8(134))
+	assertEquals(video.framebuffer[11], uint8(255))
+
+	assertEquals(video.framebuffer[12], uint8(203))
 
 	fmt.Println("Video Frame Test Passed")
 }
@@ -90,8 +96,8 @@ func TestVideoWriting(t *testing.T) {
 		}
 		options := Options{
 			FPS:     video.FPS(),
-			Bitrate: video.Bitrate(),
 			Codec:   video.Codec(),
+			Bitrate: video.Bitrate(),
 		}
 		if video.HasStreams() {
 			options.StreamFile = video.FileName()
@@ -101,12 +107,11 @@ func TestVideoWriting(t *testing.T) {
 		if err != nil {
 			panic(err)
 		}
+
 		for video.Read() {
-			err := writer.Write(video.FrameBuffer())
-			if err != nil {
-				panic(err)
-			}
+			writer.Write(video.FrameBuffer())
 		}
+
 		writer.Close()
 
 		os.Remove(output)
@@ -134,14 +139,6 @@ func TestCameraIO(t *testing.T) {
 	count := 0
 	for webcam.Read() {
 		frame := webcam.FrameBuffer()
-		for i := 0; i < len(frame); i += 3 {
-			rgb := frame[i : i+3]
-			r, g, b := int(rgb[0]), int(rgb[1]), int(rgb[2])
-			gray := uint8((3*r + 4*g + b) / 8)
-			frame[i] = gray
-			frame[i+1] = gray
-			frame[i+2] = gray
-		}
 		err := writer.Write(frame)
 		if err != nil {
 			panic(err)
@@ -250,18 +247,24 @@ func TestImageRead(t *testing.T) {
 
 	assertEquals(w, 200)
 	assertEquals(h, 133)
-	assertEquals(len(img), 200*133*3)
-	// [255 221 189 255 221 189 255 222 186 255]
+	assertEquals(len(img), 200*133*4)
+	// [255 221 189 255 255 221 189 255 255 222 186 255 255]
 	assertEquals(img[0], uint8(255))
 	assertEquals(img[1], uint8(221))
 	assertEquals(img[2], uint8(189))
 	assertEquals(img[3], uint8(255))
-	assertEquals(img[4], uint8(221))
-	assertEquals(img[5], uint8(189))
-	assertEquals(img[6], uint8(255))
-	assertEquals(img[7], uint8(222))
-	assertEquals(img[8], uint8(186))
-	assertEquals(img[9], uint8(255))
+
+	assertEquals(img[4], uint8(255))
+	assertEquals(img[5], uint8(221))
+	assertEquals(img[6], uint8(189))
+	assertEquals(img[7], uint8(255))
+
+	assertEquals(img[8], uint8(255))
+	assertEquals(img[9], uint8(222))
+	assertEquals(img[10], uint8(186))
+	assertEquals(img[11], uint8(255))
+
+	assertEquals(img[12], uint8(255))
 
 	fmt.Println("Image Reading Test Passed")
 }

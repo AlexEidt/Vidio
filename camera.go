@@ -90,7 +90,7 @@ func NewCamera(stream int) (*Camera, error) {
 		return nil, fmt.Errorf("unsupported OS: %s", runtime.GOOS)
 	}
 
-	camera := &Camera{name: device, depth: 3}
+	camera := &Camera{name: device, depth: 4}
 	if err := camera.getCameraData(device); err != nil {
 		return nil, err
 	}
@@ -205,7 +205,7 @@ func (camera *Camera) init() error {
 		"-f", webcamDeviceName,
 		"-i", camera.name,
 		"-f", "image2pipe",
-		"-pix_fmt", "rgb24",
+		"-pix_fmt", "rgba",
 		"-vcodec", "rawvideo",
 		"-",
 	)

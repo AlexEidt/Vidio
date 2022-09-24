@@ -90,7 +90,7 @@ Close()
 type Options struct {
 	Bitrate    int     // Bitrate.
 	Loop       int     // For GIFs only. -1=no loop, 0=infinite loop, >0=number of loops.
-	Delay      int     // Delay for final frame of GIFs.
+	Delay      int     // Delay for final frame of GIFs in centiseconds.
 	Macro      int     // Macroblock size for determining how to resize frames for codecs.
 	FPS        float64 // Frames per second for output video.
 	Quality    float64 // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst.

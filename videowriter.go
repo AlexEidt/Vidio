@@ -31,7 +31,7 @@ type VideoWriter struct {
 type Options struct {
 	Bitrate    int     // Bitrate.
 	Loop       int     // For GIFs only. -1=no loop, 0=infinite loop, >0=number of loops.
-	Delay      int     // Delay for final frame of GIFs.
+	Delay      int     // Delay for final frame of GIFs in centiseconds.
 	Macro      int     // Macroblock size for determining how to resize frames for codecs.
 	FPS        float64 // Frames per second for output video.
 	Quality    float64 // If bitrate not given, use quality instead. Must be between 0 and 1. 0:best, 1:worst.
@@ -56,26 +56,32 @@ func (writer *VideoWriter) Height() int {
 	return writer.height
 }
 
+// Bitrate of video in bits/s.
 func (writer *VideoWriter) Bitrate() int {
 	return writer.bitrate
 }
 
+// For GIFs only, defines looping behavior. -1=no loop, 0=infinite loop, >0=number of loops.
 func (writer *VideoWriter) Loop() int {
 	return writer.loop
 }
 
+// Delay for final frame of GIFs in centiseconds.
 func (writer *VideoWriter) Delay() int {
 	return writer.delay
 }
 
+// Macroblock size for determining how to resize frames for codecs.
 func (writer *VideoWriter) Macro() int {
 	return writer.macro
 }
 
+// Frames per second of video.
 func (writer *VideoWriter) FPS() float64 {
 	return writer.fps
 }
 
+// Video Codec Quality parameter. Must be between 0 and 1. 0:best, 1:worst.
 func (writer *VideoWriter) Quality() float64 {
 	return writer.quality
 }

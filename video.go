@@ -45,7 +45,7 @@ func (video *Video) Depth() int {
 	return video.depth
 }
 
-// Bitrate of video.
+// Bitrate of video in bits/s.
 func (video *Video) Bitrate() int {
 	return video.bitrate
 }
@@ -60,10 +60,12 @@ func (video *Video) Stream() int {
 	return video.stream
 }
 
+// Video duration in seconds.
 func (video *Video) Duration() float64 {
 	return video.duration
 }
 
+// Frames per second of video.
 func (video *Video) FPS() float64 {
 	return video.fps
 }

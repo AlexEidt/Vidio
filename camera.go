@@ -25,6 +25,7 @@ type Camera struct {
 	cmd         *exec.Cmd      // ffmpeg command.
 }
 
+// Camera device name.
 func (camera *Camera) Name() string {
 	return camera.name
 }
@@ -37,10 +38,12 @@ func (camera *Camera) Height() int {
 	return camera.height
 }
 
+// Channels of video frames.
 func (camera *Camera) Depth() int {
 	return camera.depth
 }
 
+// Frames per second of video.
 func (camera *Camera) FPS() float64 {
 	return camera.fps
 }

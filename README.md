@@ -167,6 +167,23 @@ for i := 1; i <= 10; i++ {
 }
 ```
 
+Write all frames of `video.mp4` as `jpg` images.
+
+```go
+video, _ := vidio.NewVideo("video.mp4")
+
+img := image.NewRGBA(image.Rect(0, 0, video.Width(), video.Height()))
+video.SetFrameBuffer(img.Pix)
+
+frame := 0
+for video.Read() {
+	f, _ := os.Create(fmt.Sprintf("%d.jpg", frame))
+	jpeg.Encode(f, img, nil)
+	f.Close()
+	frame++
+}
+```
+
 # Acknowledgements
 
 * Special thanks to [Zulko](http://zulko.github.io/) and his [blog post](http://zulko.github.io/blog/2013/09/27/read-and-write-video-frames-in-python-using-ffmpeg/) about using FFmpeg to process video.

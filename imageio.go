@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"image/color"
 	"image/jpeg"
 	"image/png"
 )
@@ -61,27 +60,14 @@ func Write(filename string, width, height int, buffer []byte) error {
 	defer f.Close()
 
 	image := image.NewRGBA(image.Rect(0, 0, width, height))
-	index := 0
-	for h := 0; h < height; h++ {
-		for w := 0; w < width; w++ {
-			r, g, b := buffer[index+0], buffer[index+1], buffer[index+2]
-			image.Set(w, h, color.RGBA{r, g, b, 255})
-			index += 4
-		}
-	}
+	copy(image.Pix, buffer)
 
 	switch filepath.Ext(filename) {
 	case ".png":
-		if err := png.Encode(f, image); err != nil {
-			return err
-		}
+		return png.Encode(f, image)
 	case ".jpg", ".jpeg":
-		if err := jpeg.Encode(f, image, nil); err != nil {
-			return err
-		}
+		return jpeg.Encode(f, image, nil)
 	default:
 		return fmt.Errorf("unsupported file extension: %s", filepath.Ext(filename))
 	}
-
-	return nil
 }

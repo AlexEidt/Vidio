@@ -232,16 +232,10 @@ func (video *Video) Read() bool {
 		}
 	}
 
-	total := 0
-	for total < video.width*video.height*video.depth {
-		n, err := video.pipe.Read(video.framebuffer[total:])
-		if err == io.EOF {
-			video.Close()
-			return false
-		}
-		total += n
+	if _, err := io.ReadFull(video.pipe, video.framebuffer); err != nil {
+		video.Close()
+		return false
 	}
-
 	return true
 }
 

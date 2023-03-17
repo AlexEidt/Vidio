@@ -24,7 +24,7 @@ type Video struct {
 	hasstreams  bool              // Flag storing whether file has additional data streams.
 	framebuffer []byte            // Raw frame data.
 	metadata    map[string]string // Video metadata.
-	pipe        *io.ReadCloser    // Stdout pipe for ffmpeg process.
+	pipe        io.ReadCloser     // Stdout pipe for ffmpeg process.
 	cmd         *exec.Cmd         // ffmpeg command.
 }
 
@@ -209,7 +209,7 @@ func (video *Video) init() error {
 	if err != nil {
 		return err
 	}
-	video.pipe = &pipe
+	video.pipe = pipe
 
 	if err := cmd.Start(); err != nil {
 		return err
@@ -234,7 +234,7 @@ func (video *Video) Read() bool {
 
 	total := 0
 	for total < video.width*video.height*video.depth {
-		n, err := (*video.pipe).Read(video.framebuffer[total:])
+		n, err := video.pipe.Read(video.framebuffer[total:])
 		if err == io.EOF {
 			video.Close()
 			return false
@@ -248,7 +248,7 @@ func (video *Video) Read() bool {
 // Closes the pipe and stops the ffmpeg process.
 func (video *Video) Close() {
 	if video.pipe != nil {
-		(*video.pipe).Close()
+		video.pipe.Close()
 	}
 	if video.cmd != nil {
 		video.cmd.Wait()
@@ -263,7 +263,7 @@ func (video *Video) cleanup() {
 	go func() {
 		<-c
 		if video.pipe != nil {
-			(*video.pipe).Close()
+			video.pipe.Close()
 		}
 		if video.cmd != nil {
 			video.cmd.Process.Kill()

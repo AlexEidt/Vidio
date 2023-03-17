@@ -14,15 +14,15 @@ import (
 )
 
 type Camera struct {
-	name        string         // Camera device name.
-	width       int            // Camera frame width.
-	height      int            // Camera frame height.
-	depth       int            // Camera frame depth.
-	fps         float64        // Camera frame rate.
-	codec       string         // Camera codec.
-	framebuffer []byte         // Raw frame data.
-	pipe        *io.ReadCloser // Stdout pipe for ffmpeg process streaming webcam.
-	cmd         *exec.Cmd      // ffmpeg command.
+	name        string        // Camera device name.
+	width       int           // Camera frame width.
+	height      int           // Camera frame height.
+	depth       int           // Camera frame depth.
+	fps         float64       // Camera frame rate.
+	codec       string        // Camera codec.
+	framebuffer []byte        // Raw frame data.
+	pipe        io.ReadCloser // Stdout pipe for ffmpeg process streaming webcam.
+	cmd         *exec.Cmd     // ffmpeg command.
 }
 
 // Camera device name.
@@ -219,7 +219,7 @@ func (camera *Camera) init() error {
 		return err
 	}
 
-	camera.pipe = &pipe
+	camera.pipe = pipe
 	if err := cmd.Start(); err != nil {
 		return err
 	}
@@ -240,10 +240,9 @@ func (camera *Camera) Read() bool {
 		}
 	}
 
-	total := 0
-	for total < camera.width*camera.height*camera.depth {
-		n, _ := (*camera.pipe).Read(camera.framebuffer[total:])
-		total += n
+	if _, err := io.ReadFull(camera.pipe, camera.framebuffer); err != nil {
+		camera.Close()
+		return false
 	}
 
 	return true
@@ -252,7 +251,7 @@ func (camera *Camera) Read() bool {
 // Closes the pipe and stops the ffmpeg process.
 func (camera *Camera) Close() {
 	if camera.pipe != nil {
-		(*camera.pipe).Close()
+		camera.pipe.Close()
 	}
 	if camera.cmd != nil {
 		camera.cmd.Process.Kill()
@@ -267,7 +266,7 @@ func (camera *Camera) cleanup() {
 	go func() {
 		<-c
 		if camera.pipe != nil {
-			(*camera.pipe).Close()
+			camera.pipe.Close()
 		}
 		if camera.cmd != nil {
 			camera.cmd.Process.Kill()

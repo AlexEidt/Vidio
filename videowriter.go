@@ -12,19 +12,19 @@ import (
 )
 
 type VideoWriter struct {
-	filename   string          // Output filename.
-	streamfile string          // Extra stream data filename.
-	width      int             // Frame width.
-	height     int             // Frame height.
-	bitrate    int             // Output video bitrate.
-	loop       int             // Number of times for GIF to loop.
-	delay      int             // Delay of final frame of GIF. Default -1 (same delay as previous frame).
-	macro      int             // Macroblock size for determining how to resize frames for codecs.
-	fps        float64         // Frames per second for output video. Default 25.
-	quality    float64         // Used if bitrate not given. Default 0.5.
-	codec      string          // Codec to encode video with. Default libx264.
-	pipe       *io.WriteCloser // Stdout pipe of ffmpeg process.
-	cmd        *exec.Cmd       // ffmpeg command.
+	filename   string         // Output filename.
+	streamfile string         // Extra stream data filename.
+	width      int            // Frame width.
+	height     int            // Frame height.
+	bitrate    int            // Output video bitrate.
+	loop       int            // Number of times for GIF to loop.
+	delay      int            // Delay of final frame of GIF. Default -1 (same delay as previous frame).
+	macro      int            // Macroblock size for determining how to resize frames for codecs.
+	fps        float64        // Frames per second for output video. Default 25.
+	quality    float64        // Used if bitrate not given. Default 0.5.
+	codec      string         // Codec to encode video with. Default libx264.
+	pipe       io.WriteCloser // Stdout pipe of ffmpeg process.
+	cmd        *exec.Cmd      // ffmpeg command.
 }
 
 // Optional parameters for VideoWriter.
@@ -257,7 +257,7 @@ func (writer *VideoWriter) init() error {
 	if err != nil {
 		return err
 	}
-	writer.pipe = &pipe
+	writer.pipe = pipe
 
 	if err := cmd.Start(); err != nil {
 		return err
@@ -277,7 +277,7 @@ func (writer *VideoWriter) Write(frame []byte) error {
 
 	total := 0
 	for total < len(frame) {
-		n, err := (*writer.pipe).Write(frame[total:])
+		n, err := writer.pipe.Write(frame[total:])
 		if err != nil {
 			return err
 		}
@@ -290,7 +290,7 @@ func (writer *VideoWriter) Write(frame []byte) error {
 // Closes the pipe and stops the ffmpeg process.
 func (writer *VideoWriter) Close() {
 	if writer.pipe != nil {
-		(*writer.pipe).Close()
+		writer.pipe.Close()
 	}
 	if writer.cmd != nil {
 		writer.cmd.Wait()
@@ -305,7 +305,7 @@ func (writer *VideoWriter) cleanup() {
 	go func() {
 		<-c
 		if writer.pipe != nil {
-			(*writer.pipe).Close()
+			writer.pipe.Close()
 		}
 		if writer.cmd != nil {
 			writer.cmd.Process.Kill()

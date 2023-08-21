@@ -36,11 +36,11 @@ func GetVideoFrame(filename string, n int, frameBuffer []byte) error {
 	}
 
 	if frameBuffer == nil {
-		frameBuffer = make([]byte, frameBufferSize)
-	} else {
-		if len(frameBuffer) < frameBufferSize {
-			return errors.New("vidio: provided frame buffer size is smaller than the frame size")
-		}
+		return errors.New("vidio: provided frame buffer reference is nil")
+	}
+
+	if len(frameBuffer) < frameBufferSize {
+		return errors.New("vidio: provided frame buffer size is smaller than the frame size")
 	}
 
 	selectExpression, err := buildSelectExpression(n)

@@ -30,6 +30,28 @@ func TestGetFrameShouldReturnErrorOnOutOfRangeFrame(t *testing.T) {
 	}
 }
 
+func TestGetFrameShouldReturnErrorOnNilFrameBuffer(t *testing.T) {
+	path := "test/koala.mp4"
+	var buffer []byte = nil
+
+	err := GetVideoFrame(path, 0, buffer)
+
+	if err == nil {
+		t.Error("Error was expected to not be nil")
+	}
+}
+
+func TestGetFrameShouldReturnErrorOnInvalidFrameBufferSize(t *testing.T) {
+	path := "test/koala.mp4"
+	img := image.NewRGBA(image.Rect(0, 0, 480/2, 270/2))
+
+	err := GetVideoFrame(path, 0, img.Pix)
+
+	if err == nil {
+		t.Error("Error was expected to not be nil")
+	}
+}
+
 func TestGetFrameShouldReturnCorrectFrame(t *testing.T) {
 	path := "test/koala.mp4"
 	img := image.NewRGBA(image.Rect(0, 0, 480, 270))

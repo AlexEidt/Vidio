@@ -3,7 +3,6 @@ package vidio
 import (
 	"errors"
 	"fmt"
-	"image"
 	"io"
 	"os"
 	"os/exec"
@@ -13,28 +12,40 @@ import (
 	"syscall"
 )
 
-// Return the N-th frame of the video specified by the filename as a pointer to a RGBA image. The frames are indexed from 0.
-func GetVideoFrame(filename string, n int) (*image.RGBA, error) {
+// Return the N-th frame of the video specified by the filename in the RGBA format and stored it to the provided frame buffer. The frames are indexed from 0.
+func GetVideoFrame(filename string, n int, frameBuffer []byte) error {
 	if !exists(filename) {
-		return nil, fmt.Errorf("vidio: video file %s does not exist", filename)
+		return fmt.Errorf("vidio: video file %s does not exist", filename)
 	}
 
 	if err := installed("ffmpeg"); err != nil {
-		return nil, err
+		return err
 	}
 
 	if err := installed("ffprobe"); err != nil {
-		return nil, err
+		return err
+	}
+
+	frameBufferSize, framesCount, err := probeVideo(filename)
+	if err != nil {
+		return err
+	}
+
+	if n >= framesCount {
+		return errors.New("vidio: provided frame index is not in frame count range")
+	}
+
+	if frameBuffer == nil {
+		frameBuffer = make([]byte, frameBufferSize)
+	} else {
+		if len(frameBuffer) < frameBufferSize {
+			return errors.New("vidio: provided frame buffer size is smaller than the frame size")
+		}
 	}
 
 	selectExpression, err := buildSelectExpression(n)
 	if err != nil {
-		return nil, fmt.Errorf("vidio: failed to parse the specified frame index: %w", err)
-	}
-
-	imageRect, stream, err := probeVideo(filename)
-	if err != nil {
-		return nil, err
+		return fmt.Errorf("vidio: failed to parse the specified frame index: %w", err)
 	}
 
 	cmd := exec.Command(
@@ -44,7 +55,7 @@ func GetVideoFrame(filename string, n int) (*image.RGBA, error) {
 		"-loglevel", "quiet",
 		"-pix_fmt", "rgba",
 		"-vcodec", "rawvideo",
-		"-map", fmt.Sprintf("0:v:%d", stream),
+		"-map", "0:v:0",
 		"-vf", selectExpression,
 		"-vsync", "0",
 		"-",
@@ -52,11 +63,11 @@ func GetVideoFrame(filename string, n int) (*image.RGBA, error) {
 
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, fmt.Errorf("vidio: failed to access the ffmpeg stdout pipe: %w", err)
+		return fmt.Errorf("vidio: failed to access the ffmpeg stdout pipe: %w", err)
 	}
 
 	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("vidio: failed to start the ffmpeg cmd: %w", err)
+		return fmt.Errorf("vidio: failed to start the ffmpeg cmd: %w", err)
 	}
 
 	interruptChan := make(chan os.Signal, 1)
@@ -72,59 +83,70 @@ func GetVideoFrame(filename string, n int) (*image.RGBA, error) {
 		os.Exit(1)
 	}()
 
-	imageBuffer := image.NewRGBA(imageRect)
-	if _, err := io.ReadFull(stdoutPipe, imageBuffer.Pix); err != nil {
-		return nil, fmt.Errorf("vidio: failed to read the ffmpeg cmd result to the image buffer: %w", err)
+	if _, err := io.ReadFull(stdoutPipe, frameBuffer); err != nil {
+		return fmt.Errorf("vidio: failed to read the ffmpeg cmd result to the image buffer: %w", err)
 	}
 
 	if err := stdoutPipe.Close(); err != nil {
-		return nil, fmt.Errorf("vidio: failed to close the ffmpeg stdout pipe: %w", err)
+		return fmt.Errorf("vidio: failed to close the ffmpeg stdout pipe: %w", err)
 	}
 
 	if err := cmd.Wait(); err != nil {
-		return nil, fmt.Errorf("vidio: failed to free resources after the ffmpeg cmd: %w", err)
+		return fmt.Errorf("vidio: failed to free resources after the ffmpeg cmd: %w", err)
 	}
 
-	return imageBuffer, nil
+	return nil
 }
 
-// Helper function used to extract the target frame size and stream index
-func probeVideo(filename string) (image.Rectangle, int, error) {
+// Helper function used to extract the target frame buffer size and frames count
+func probeVideo(filename string) (int, int, error) {
 	videoData, err := ffprobe(filename, "v")
 	if err != nil {
-		return image.Rectangle{}, 0, fmt.Errorf("vidio: no video data found in %s: %w", filename, err)
+		return 0, 0, fmt.Errorf("vidio: no video data found in %s: %w", filename, err)
 	}
 
 	if len(videoData) == 0 {
-		return image.Rectangle{}, 0, fmt.Errorf("vidio: no video streams found in %s", filename)
+		return 0, 0, fmt.Errorf("vidio: no video streams found in %s", filename)
 	}
 
 	var (
 		width  int = 0
 		height int = 0
+		frames int = 0
 	)
 
 	if widthStr, ok := videoData[0]["width"]; !ok {
-		return image.Rectangle{}, 0, errors.New("vidio: failed to access the image width")
+		return 0, 0, errors.New("vidio: failed to access the image width")
 	} else {
 		if widthParsed, err := strconv.Atoi(widthStr); err != nil {
-			return image.Rectangle{}, 0, fmt.Errorf("vidio: failed to parse the image width: %w", err)
+			return 0, 0, fmt.Errorf("vidio: failed to parse the image width: %w", err)
 		} else {
 			width = widthParsed
 		}
 	}
 
 	if heightStr, ok := videoData[0]["height"]; !ok {
-		return image.Rectangle{}, 0, errors.New("vidio: failed to access the image height")
+		return 0, 0, errors.New("vidio: failed to access the image height")
 	} else {
 		if heightParsed, err := strconv.Atoi(heightStr); err != nil {
-			return image.Rectangle{}, 0, fmt.Errorf("vidio: failed to parse the image height: %w", err)
+			return 0, 0, fmt.Errorf("vidio: failed to parse the image height: %w", err)
 		} else {
 			height = heightParsed
 		}
 	}
 
-	return image.Rect(0, 0, width, height), 0, nil
+	if framesStr, ok := videoData[0]["nb_frames"]; !ok {
+		return 0, 0, errors.New("vidio: failed to access the frames count")
+	} else {
+		if framesParsed, err := strconv.Atoi(framesStr); err != nil {
+			return 0, 0, fmt.Errorf("vidio: failed to parse the frames count: %w", err)
+		} else {
+			frames = framesParsed
+		}
+	}
+
+	frameBufferSize := width * height * 4
+	return frameBufferSize, frames, nil
 }
 
 // Error representing a strings.Builder failure in the buildSelectExpression func.

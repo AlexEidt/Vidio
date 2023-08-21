@@ -1,6 +1,7 @@
 package vidio
 
 import (
+	"image"
 	"image/png"
 	"os"
 	"testing"
@@ -8,12 +9,9 @@ import (
 
 func TestGetFrameShouldReturnErrorOnInvalidFilePath(t *testing.T) {
 	path := "test/koala-video-not-present.mp4"
+	img := image.NewRGBA(image.Rect(0, 0, 480, 270))
 
-	frame, err := GetVideoFrame(path, 2)
-
-	if frame != nil {
-		t.Errorf("Frame was expected to be nil")
-	}
+	err := GetVideoFrame(path, 2, img.Pix)
 
 	if err == nil {
 		t.Error("Error was expected to not be nil")
@@ -22,13 +20,10 @@ func TestGetFrameShouldReturnErrorOnInvalidFilePath(t *testing.T) {
 
 func TestGetFrameShouldReturnErrorOnOutOfRangeFrame(t *testing.T) {
 	path := "test/koala.mp4"
+	img := image.NewRGBA(image.Rect(0, 0, 480, 270))
 	framesCount := 101
 
-	frame, err := GetVideoFrame(path, framesCount+1)
-
-	if frame != nil {
-		t.Error("Frames was expected to be nil")
-	}
+	err := GetVideoFrame(path, framesCount+1, img.Pix)
 
 	if err == nil {
 		t.Error("Error was expected to not be nil")
@@ -37,17 +32,14 @@ func TestGetFrameShouldReturnErrorOnOutOfRangeFrame(t *testing.T) {
 
 func TestGetFrameShouldReturnCorrectFrame(t *testing.T) {
 	path := "test/koala.mp4"
+	img := image.NewRGBA(image.Rect(0, 0, 480, 270))
 
 	expectedFrameFile, _ := os.Open("test/koala-frame5.png")
 	defer expectedFrameFile.Close()
 
 	expectedFrame, _ := png.Decode(expectedFrameFile)
 
-	actualFrame, err := GetVideoFrame(path, 5)
-
-	if actualFrame == nil {
-		t.Error("Frame was expected to not be nil")
-	}
+	err := GetVideoFrame(path, 5, img.Pix)
 
 	if err != nil {
 		t.Error("Error was expected to be nil")
@@ -56,7 +48,7 @@ func TestGetFrameShouldReturnCorrectFrame(t *testing.T) {
 	for xIndex := 0; xIndex < expectedFrame.Bounds().Dx(); xIndex += 1 {
 		for yIndex := 0; yIndex < expectedFrame.Bounds().Dy(); yIndex += 1 {
 			eR, eG, eB, eA := expectedFrame.At(xIndex, yIndex).RGBA()
-			aR, aG, aB, aA := actualFrame.At(xIndex, yIndex).RGBA()
+			aR, aG, aB, aA := img.At(xIndex, yIndex).RGBA()
 
 			if eR != aR || eG != aG || eB != aB || eA != aA {
 				t.Error("The expected and actual frames were expected to be equal")

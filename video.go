@@ -309,6 +309,10 @@ func (video *Video) ReadFrame(n int) error {
 // Read the N-amount of frames with the given indexes and return them as a slice of buffers. If one of
 // the indexes is out of range, the function will return an error. The frames are indexes from 0.
 func (video *Video) ReadFrames(n ...int) ([][]byte, error) {
+	if len(n) == 0 {
+		return nil, fmt.Errorf("vidio: no frames indexes specified")
+	}
+
 	for _, nValue := range n {
 		if nValue >= video.frames {
 			return nil, fmt.Errorf("vidio: provided frame index %d is not in frame count range", nValue)

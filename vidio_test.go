@@ -341,6 +341,20 @@ func TestReadFrameShouldReturnCorrectFrame(t *testing.T) {
 	}
 }
 
+func TestReadFramesShouldReturnErrorOnNoFramesSpecified(t *testing.T) {
+	path := "test/koala.mp4"
+
+	video, err := NewVideo(path)
+	if err != nil {
+		t.Errorf("Failed to create the video: %s", err)
+	}
+
+	_, err = video.ReadFrames()
+	if err == nil {
+		t.Error("Error was expected to no be nil")
+	}
+}
+
 func TestReadFramesShouldReturnErrorOnOutOfRangeFrame(t *testing.T) {
 	path := "test/koala.mp4"
 

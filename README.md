@@ -16,7 +16,7 @@ go get github.com/AlexEidt/Vidio
 
 The `Video` struct stores data about a video file you give it. The code below shows an example of sequentially reading the frames of the given video.
 
-Calling the `Read()` function will fill in the `Video` struct `framebuffer` with the next frame data as 8-bit RGBA data, stored in a flattened byte array in row-major order where each pixel is represented by four consecutive bytes representing the R, G, B and A components of that pixel. Note that the A (alpha) component will always be 255.
+Calling the `Read()` function will fill in the `Video` struct `framebuffer` with the next frame data as 8-bit RGBA data, stored in a flattened byte array in row-major order where each pixel is represented by four consecutive bytes representing the R, G, B and A components of that pixel. Note that the A (alpha) component will always be 255. When iteration over the entire video file is not required, we can lookup a specific frame by calling `ReadFrame(n int)`. By calling `ReadFrames(n ...int)`, we can immediately access multiple frames as `[][]byte` and skip the `framebuffer`.
 
 ```go
 vidio.NewVideo(filename string) (*vidio.Video, error)
@@ -38,6 +38,8 @@ MetaData() map[string]string
 SetFrameBuffer(buffer []byte) error
 
 Read() bool
+ReadFrame(n int) error
+ReadFrames(n ...int) ([][]byte, error)
 Close()
 ```
 
@@ -181,6 +183,38 @@ for video.Read() {
 	jpeg.Encode(f, img, nil)
 	f.Close()
 	frame++
+}
+```
+
+Write the last frame of `video.mp4` as `jpg` image (without iterating over all video frames).
+
+```go
+video, _ := video.NewVideo("video.mp4")
+
+img := image.NewRGBA(image.Rect(0, 0, video.Width(), video.Height()))
+video.SetFrameBuffer(img.Pix)
+
+video.ReadFrame(video.Frames() - 1)
+
+f, _ := os.Create(fmt.Sprintf("%d.jpg", video.Frames() - 1))
+jpeg.Encode(f, img, nil)
+f.Close()
+```
+
+Write the first and last frames of `video.mp4` as `jpg` images (without iterating over all video frames).
+
+```go
+video, _ := vidio.NewVideo("video.mp4")
+
+frames, _ := video.ReadFrames(0, video.Frames() - 1)
+
+img := image.NewRGBA(image.Rect(0, 0, video.Width(), video.Height()))
+for index, frame := range frames {
+	copy(img.Pix, frame)
+
+	f, _ := os.Create(fmt.Sprintf("%d.jpg", index))
+	jpeg.Encode(f, img, nil)
+	f.Close()
 }
 ```
 

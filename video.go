@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 )
@@ -239,6 +240,141 @@ func (video *Video) Read() bool {
 	return true
 }
 
+// Reads the N-th frame from the video and stores it in the framebuffer. If the index is out of range or
+// the operation failes, the function will return an error. The frames are indexed from 0.
+func (video *Video) ReadFrame(n int) error {
+	if n >= video.frames {
+		return fmt.Errorf("vidio: provided frame index %d is not in frame count range", n)
+	}
+
+	if video.framebuffer == nil {
+		video.framebuffer = make([]byte, video.width*video.height*video.depth)
+	}
+
+	selectExpression, err := buildSelectExpression(n)
+	if err != nil {
+		return fmt.Errorf("vidio: failed to parse the specified frame index: %w", err)
+	}
+
+	cmd := exec.Command(
+		"ffmpeg",
+		"-i", video.filename,
+		"-f", "image2pipe",
+		"-loglevel", "quiet",
+		"-pix_fmt", "rgba",
+		"-vcodec", "rawvideo",
+		"-map", fmt.Sprintf("0:v:%d", video.stream),
+		"-vf", selectExpression,
+		"-vsync", "0",
+		"-",
+	)
+
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("vidio: failed to access the ffmpeg stdout pipe: %w", err)
+	}
+
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("vidio: failed to start the ffmpeg cmd: %w", err)
+	}
+
+	interruptChan := make(chan os.Signal, 1)
+	signal.Notify(interruptChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-interruptChan
+		if stdoutPipe != nil {
+			stdoutPipe.Close()
+		}
+		if cmd != nil {
+			cmd.Process.Kill()
+		}
+		os.Exit(1)
+	}()
+
+	if _, err := io.ReadFull(stdoutPipe, video.framebuffer); err != nil {
+		return fmt.Errorf("vidio: failed to read the ffmpeg cmd result to the image buffer: %w", err)
+	}
+
+	if err := stdoutPipe.Close(); err != nil {
+		return fmt.Errorf("vidio: failed to close the ffmpeg stdout pipe: %w", err)
+	}
+
+	if err := cmd.Wait(); err != nil {
+		return fmt.Errorf("vidio: failed to free resources after the ffmpeg cmd: %w", err)
+	}
+
+	return nil
+}
+
+// Read the N-amount of frames with the given indexes and return them as a slice of buffers. If one of
+// the indexes is out of range, the function will return an error. The frames are indexes from 0.
+func (video *Video) ReadFrames(n ...int) ([][]byte, error) {
+	for _, nValue := range n {
+		if nValue >= video.frames {
+			return nil, fmt.Errorf("vidio: provided frame index %d is not in frame count range", nValue)
+		}
+	}
+
+	selectExpression, err := buildSelectExpression(n...)
+	if err != nil {
+		return nil, fmt.Errorf("vidio: failed to parse the specified frame index: %w", err)
+	}
+
+	cmd := exec.Command(
+		"ffmpeg",
+		"-i", video.filename,
+		"-f", "image2pipe",
+		"-loglevel", "quiet",
+		"-pix_fmt", "rgba",
+		"-vcodec", "rawvideo",
+		"-map", fmt.Sprintf("0:v:%d", video.stream),
+		"-vf", selectExpression,
+		"-vsync", "0",
+		"-",
+	)
+
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("vidio: failed to access the ffmpeg stdout pipe: %w", err)
+	}
+
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("vidio: failed to start the ffmpeg cmd: %w", err)
+	}
+
+	interruptChan := make(chan os.Signal, 1)
+	signal.Notify(interruptChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-interruptChan
+		if stdoutPipe != nil {
+			stdoutPipe.Close()
+		}
+		if cmd != nil {
+			cmd.Process.Kill()
+		}
+		os.Exit(1)
+	}()
+
+	frames := make([][]byte, len(n))
+	for frameIndex := range frames {
+		frames[frameIndex] = make([]byte, video.width*video.height*video.depth)
+
+		if _, err := io.ReadFull(stdoutPipe, frames[frameIndex]); err != nil {
+			return nil, fmt.Errorf("vidio: failed to read the ffmpeg cmd result to the image buffer: %w", err)
+		}
+	}
+
+	if err := stdoutPipe.Close(); err != nil {
+		return nil, fmt.Errorf("vidio: failed to close the ffmpeg stdout pipe: %w", err)
+	}
+
+	if err := cmd.Wait(); err != nil {
+		return nil, fmt.Errorf("vidio: failed to free resources after the ffmpeg cmd: %w", err)
+	}
+
+	return frames, nil
+}
+
 // Closes the pipe and stops the ffmpeg process.
 func (video *Video) Close() {
 	if video.pipe != nil {
@@ -264,4 +400,45 @@ func (video *Video) cleanup() {
 		}
 		os.Exit(1)
 	}()
+}
+
+// Error representing a strings.Builder failure in the buildSelectExpression func.
+var errExpressionBuilder = fmt.Errorf("vidio: failed to write tokens to the frame select expresion")
+
+// Helper function used to generate a "-vf select" expression that specifies which video frames should be exported.
+func buildSelectExpression(n ...int) (string, error) {
+	sb := strings.Builder{}
+	if _, err := sb.WriteString("select='"); err != nil {
+		return "", errExpressionBuilder
+	}
+
+	for index, frame := range n {
+		if index != 0 {
+			if _, err := sb.WriteRune('+'); err != nil {
+				return "", errExpressionBuilder
+			}
+		}
+
+		if _, err := sb.WriteString("eq(n\\,"); err != nil {
+
+			return "", errExpressionBuilder
+		}
+
+		if _, err := sb.WriteString(strconv.Itoa(frame)); err != nil {
+
+			return "", errExpressionBuilder
+		}
+
+		if _, err := sb.WriteRune(')'); err != nil {
+
+			return "", errExpressionBuilder
+		}
+	}
+
+	if _, err := sb.WriteRune('\''); err != nil {
+
+		return "", errExpressionBuilder
+	}
+
+	return sb.String(), nil
 }

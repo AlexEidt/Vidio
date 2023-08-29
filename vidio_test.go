@@ -2,6 +2,8 @@ package vidio
 
 import (
 	"fmt"
+	"image"
+	"image/png"
 	"os"
 	"testing"
 )
@@ -282,4 +284,143 @@ func TestImageWrite(t *testing.T) {
 	os.Remove("test/bananas-out.png")
 
 	fmt.Println("Image Writing Test Passed")
+}
+
+func TestReadFrameShouldReturnErrorOnOutOfRangeFrame(t *testing.T) {
+	path := "test/koala.mp4"
+
+	video, err := NewVideo(path)
+	if err != nil {
+		t.Errorf("Failed to create the video: %s", err)
+	}
+
+	err = video.ReadFrame(video.Frames() + 1)
+	if err == nil {
+		t.Error("Error was expected to no be nil")
+	}
+}
+
+func TestReadFrameShouldReturnCorrectFrame(t *testing.T) {
+	path := "test/koala.mp4"
+
+	expectedFrameFile, err := os.Open("test/koala-frame5.png")
+	if err != nil {
+		t.Errorf("Failed to arrange the test: %s", err)
+	}
+
+	defer expectedFrameFile.Close()
+
+	expectedFrame, err := png.Decode(expectedFrameFile)
+	if err != nil {
+		t.Errorf("Failed to arrange the test: %s", err)
+	}
+
+	video, err := NewVideo(path)
+	if err != nil {
+		t.Errorf("Failed to create the video: %s", err)
+	}
+
+	actualFrame := image.NewRGBA(expectedFrame.Bounds())
+	if err := video.SetFrameBuffer(actualFrame.Pix); err != nil {
+		t.Errorf("Failed to set the frame buffer: %s", err)
+	}
+
+	if err := video.ReadFrame(5); err != nil {
+		t.Errorf("Failed to read the given frame: %s", err)
+	}
+
+	for xIndex := 0; xIndex < expectedFrame.Bounds().Dx(); xIndex += 1 {
+		for yIndex := 0; yIndex < expectedFrame.Bounds().Dy(); yIndex += 1 {
+			eR, eG, eB, eA := expectedFrame.At(xIndex, yIndex).RGBA()
+			aR, aG, aB, aA := actualFrame.At(xIndex, yIndex).RGBA()
+
+			if eR != aR || eG != aG || eB != aB || eA != aA {
+				t.Error("The expected and actual frames were expected to be equal")
+			}
+		}
+	}
+}
+
+func TestReadFramesShouldReturnErrorOnNoFramesSpecified(t *testing.T) {
+	path := "test/koala.mp4"
+
+	video, err := NewVideo(path)
+	if err != nil {
+		t.Errorf("Failed to create the video: %s", err)
+	}
+
+	_, err = video.ReadFrames()
+	if err == nil {
+		t.Error("Error was expected to no be nil")
+	}
+}
+
+func TestReadFramesShouldReturnErrorOnOutOfRangeFrame(t *testing.T) {
+	path := "test/koala.mp4"
+
+	video, err := NewVideo(path)
+	if err != nil {
+		t.Errorf("Failed to create the video: %s", err)
+	}
+
+	_, err = video.ReadFrames(0, video.Frames()-1, video.Frames()+1)
+	if err == nil {
+		t.Error("Error was expected to no be nil")
+	}
+}
+
+func TestReadFramesShouldReturnCorrectFrames(t *testing.T) {
+	path := "test/koala.mp4"
+
+	expectedFrames := make([]image.Image, 0, 2)
+
+	expectedFrameFile, err := os.Open("test/koala-frame5.png")
+	if err != nil {
+		t.Errorf("Failed to arrange the test: %s", err)
+	}
+
+	expectedFrame, err := png.Decode(expectedFrameFile)
+	if err != nil {
+		t.Errorf("Failed to arrange the test: %s", err)
+	}
+
+	expectedFrameFile.Close()
+	expectedFrames = append(expectedFrames, expectedFrame)
+
+	expectedFrameFile, err = os.Open("test/koala-frame15.png")
+	if err != nil {
+		t.Errorf("Failed to arrange the test: %s", err)
+	}
+
+	expectedFrame, err = png.Decode(expectedFrameFile)
+	if err != nil {
+		t.Errorf("Failed to arrange the test: %s", err)
+	}
+
+	expectedFrameFile.Close()
+	expectedFrames = append(expectedFrames, expectedFrame)
+
+	video, err := NewVideo(path)
+	if err != nil {
+		t.Errorf("Failed to create the video: %s", err)
+	}
+
+	frames, err := video.ReadFrames(5, 15)
+	if err != nil {
+		t.Errorf("Failed to read frames: %s", err)
+	}
+
+	for index, actualFrame := range frames {
+		expectedFrame := expectedFrames[index]
+		for xIndex := 0; xIndex < expectedFrame.Bounds().Dx(); xIndex += 1 {
+			for yIndex := 0; yIndex < expectedFrame.Bounds().Dy(); yIndex += 1 {
+				eR, eG, eB, eA := expectedFrame.At(xIndex, yIndex).RGBA()
+				aR, aG, aB, aA := actualFrame.At(xIndex, yIndex).RGBA()
+
+				if eR != aR || eG != aG || eB != aB || eA != aA {
+					t.Error("The expected and actual frames were expected to be equal")
+				}
+			}
+		}
+	}
 }

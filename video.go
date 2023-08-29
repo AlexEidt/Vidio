@@ -2,6 +2,7 @@ package vidio
 
 import (
 	"fmt"
+	"image"
 	"io"
 	"os"
 	"os/exec"
@@ -237,6 +238,145 @@ func (video *Video) Read() bool {
 		return false
 	}
 	return true
+}
+
+// Reads the N-th frame from the video and stores it in the framebuffer. If the index is out of range or
+// the operation failes, the function will return an error. The frames are indexed from 0.
+func (video *Video) ReadFrame(n int) error {
+	if n >= video.frames {
+		return fmt.Errorf("vidio: provided frame index %d is not in frame count range", n)
+	}
+
+	if video.framebuffer == nil {
+		video.framebuffer = make([]byte, video.width*video.height*video.depth)
+	}
+
+	selectExpression, err := buildSelectExpression(n)
+	if err != nil {
+		return fmt.Errorf("vidio: failed to parse the specified frame index: %w", err)
+	}
+
+	cmd := exec.Command(
+		"ffmpeg",
+		"-i", video.filename,
+		"-f", "image2pipe",
+		"-loglevel", "quiet",
+		"-pix_fmt", "rgba",
+		"-vcodec", "rawvideo",
+		"-map", fmt.Sprintf("0:v:%d", video.stream),
+		"-vf", selectExpression,
+		"-vsync", "0",
+		"-",
+	)
+
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("vidio: failed to access the ffmpeg stdout pipe: %w", err)
+	}
+
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("vidio: failed to start the ffmpeg cmd: %w", err)
+	}
+
+	interruptChan := make(chan os.Signal, 1)
+	signal.Notify(interruptChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-interruptChan
+		if stdoutPipe != nil {
+			stdoutPipe.Close()
+		}
+		if cmd != nil {
+			cmd.Process.Kill()
+		}
+		os.Exit(1)
+	}()
+
+	if _, err := io.ReadFull(stdoutPipe, video.framebuffer); err != nil {
+		return fmt.Errorf("vidio: failed to read the ffmpeg cmd result to the image buffer: %w", err)
+	}
+
+	if err := stdoutPipe.Close(); err != nil {
+		return fmt.Errorf("vidio: failed to close the ffmpeg stdout pipe: %w", err)
+	}
+
+	if err := cmd.Wait(); err != nil {
+		return fmt.Errorf("vidio: failed to free resources after the ffmpeg cmd: %w", err)
+	}
+
+	return nil
+}
+
+// Read the N-amount of frames with the given indexes and return them as a slice of RGBA image pointers. If one of
+// the indexes is out of range, the function will return an error. The frames are indexes from 0.
+func (video *Video) ReadFrames(n ...int) ([]*image.RGBA, error) {
+	if len(n) == 0 {
+		return nil, fmt.Errorf("vidio: no frames indexes specified")
+	}
+
+	for _, nValue := range n {
+		if nValue >= video.frames {
+			return nil, fmt.Errorf("vidio: provided frame index %d is not in frame count range", nValue)
+		}
+	}
+
+	selectExpression, err := buildSelectExpression(n...)
+	if err != nil {
+		return nil, fmt.Errorf("vidio: failed to parse the specified frame index: %w", err)
+	}
+
+	cmd := exec.Command(
+		"ffmpeg",
+		"-i", video.filename,
+		"-f", "image2pipe",
+		"-loglevel", "quiet",
+		"-pix_fmt", "rgba",
+		"-vcodec", "rawvideo",
+		"-map", fmt.Sprintf("0:v:%d", video.stream),
+		"-vf", selectExpression,
+		"-vsync", "0",
+		"-",
+	)
+
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("vidio: failed to access the ffmpeg stdout pipe: %w", err)
+	}
+
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("vidio: failed to start the ffmpeg cmd: %w", err)
+	}
+
+	interruptChan := make(chan os.Signal, 1)
+	signal.Notify(interruptChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-interruptChan
+		if stdoutPipe != nil {
+			stdoutPipe.Close()
+		}
+		if cmd != nil {
+			cmd.Process.Kill()
+		}
+		os.Exit(1)
+	}()
+
+	frames := make([]*image.RGBA, len(n))
+	for frameIndex := range frames {
+		frames[frameIndex] = image.NewRGBA(image.Rect(0, 0, video.width, video.height))
+
+		if _, err := io.ReadFull(stdoutPipe, frames[frameIndex].Pix); err != nil {
+			return nil, fmt.Errorf("vidio: failed to read the ffmpeg cmd result to the image buffer: %w", err)
+		}
+	}
+
+	if err := stdoutPipe.Close(); err != nil {
+		return nil, fmt.Errorf("vidio: failed to close the ffmpeg stdout pipe: %w", err)
+	}
+
+	if err := cmd.Wait(); err != nil {
+		return nil, fmt.Errorf("vidio: failed to free resources after the ffmpeg cmd: %w", err)
+	}
+
+	return frames, nil
 }
 
 // Closes the pipe and stops the ffmpeg process.

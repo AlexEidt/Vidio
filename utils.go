@@ -214,3 +214,44 @@ func getDevicesWindows() ([]string, error) {
 	devices := parseDevices(builder.String())
 	return devices, nil
 }
+
+// Error representing a strings.Builder failure in the buildSelectExpression func.
+var errExpressionBuilder = fmt.Errorf("vidio: failed to write tokens to the frame select expresion")
+
+// Helper function used to generate a "-vf select" expression that specifies which video frames should be exported.
+func buildSelectExpression(n ...int) (string, error) {
+	sb := strings.Builder{}
+	if _, err := sb.WriteString("select='"); err != nil {
+		return "", errExpressionBuilder
+	}
+
+	for index, frame := range n {
+		if index != 0 {
+			if _, err := sb.WriteRune('+'); err != nil {
+				return "", errExpressionBuilder
+			}
+		}
+
+		if _, err := sb.WriteString("eq(n\\,"); err != nil {
+
+			return "", errExpressionBuilder
+		}
+
+		if _, err := sb.WriteString(strconv.Itoa(frame)); err != nil {
+
+			return "", errExpressionBuilder
+		}
+
+		if _, err := sb.WriteRune(')'); err != nil {
+
+			return "", errExpressionBuilder
+		}
+	}
+
+	if _, err := sb.WriteRune('\''); err != nil {
+
+		return "", errExpressionBuilder
+	}
+
+	return sb.String(), nil
+}

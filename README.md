@@ -16,7 +16,7 @@ go get github.com/AlexEidt/Vidio
 
 The `Video` struct stores data about a video file you give it. The code below shows an example of sequentially reading the frames of the given video.
 
-Calling the `Read()` function will fill in the `Video` struct `framebuffer` with the next frame data as 8-bit RGBA data, stored in a flattened byte array in row-major order where each pixel is represented by four consecutive bytes representing the R, G, B and A components of that pixel. Note that the A (alpha) component will always be 255. When iteration over the entire video file is not required, we can lookup a specific frame by calling `ReadFrame(n int)`. By calling `ReadFrames(n ...int)`, we can immediately access multiple frames as `[][]byte` and skip the `framebuffer`.
+Calling the `Read()` function will fill in the `Video` struct `framebuffer` with the next frame data as 8-bit RGBA data, stored in a flattened byte array in row-major order where each pixel is represented by four consecutive bytes representing the R, G, B and A components of that pixel. Note that the A (alpha) component will always be 255. When iteration over the entire video file is not required, we can lookup a specific frame by calling `ReadFrame(n int)`. By calling `ReadFrames(n ...int)`, we can immediately access multiple frames as a slice of RGBA images and skip the `framebuffer`.
 
 ```go
 vidio.NewVideo(filename string) (*vidio.Video, error)
@@ -39,7 +39,7 @@ SetFrameBuffer(buffer []byte) error
 
 Read() bool
 ReadFrame(n int) error
-ReadFrames(n ...int) ([][]byte, error)
+ReadFrames(n ...int) ([]*image.RGBA, error)
 Close()
 ```
 
@@ -208,12 +208,9 @@ video, _ := vidio.NewVideo("video.mp4")
 
 frames, _ := video.ReadFrames(0, video.Frames() - 1)
 
-img := image.NewRGBA(image.Rect(0, 0, video.Width(), video.Height()))
 for index, frame := range frames {
-	copy(img.Pix, frame)
-
 	f, _ := os.Create(fmt.Sprintf("%d.jpg", index))
-	jpeg.Encode(f, img, nil)
+	jpeg.Encode(f, frame, nil)
 	f.Close()
 }
 ```

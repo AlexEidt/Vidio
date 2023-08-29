@@ -2,6 +2,7 @@ package vidio
 
 import (
 	"fmt"
+	"image"
 	"io"
 	"os"
 	"os/exec"
@@ -305,9 +306,9 @@ func (video *Video) ReadFrame(n int) error {
 	return nil
 }
 
-// Read the N-amount of frames with the given indexes and return them as a slice of buffers. If one of
+// Read the N-amount of frames with the given indexes and return them as a slice of RGBA image pointers. If one of
 // the indexes is out of range, the function will return an error. The frames are indexes from 0.
-func (video *Video) ReadFrames(n ...int) ([][]byte, error) {
+func (video *Video) ReadFrames(n ...int) ([]*image.RGBA, error) {
 	if len(n) == 0 {
 		return nil, fmt.Errorf("vidio: no frames indexes specified")
 	}
@@ -358,11 +359,11 @@ func (video *Video) ReadFrames(n ...int) ([][]byte, error) {
 		os.Exit(1)
 	}()
 
-	frames := make([][]byte, len(n))
+	frames := make([]*image.RGBA, len(n))
 	for frameIndex := range frames {
-		frames[frameIndex] = make([]byte, video.width*video.height*video.depth)
+		frames[frameIndex] = image.NewRGBA(image.Rect(0, 0, video.width, video.height))
 
-		if _, err := io.ReadFull(stdoutPipe, frames[frameIndex]); err != nil {
+		if _, err := io.ReadFull(stdoutPipe, frames[frameIndex].Pix); err != nil {
 			return nil, fmt.Errorf("vidio: failed to read the ffmpeg cmd result to the image buffer: %w", err)
 		}
 	}

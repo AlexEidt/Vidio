@@ -410,11 +410,8 @@ func TestReadFramesShouldReturnCorrectFrames(t *testing.T) {
 		t.Errorf("Failed to read frames: %s", err)
 	}
 
-	for index, buffer := range frames {
+	for index, actualFrame := range frames {
 		expectedFrame := expectedFrames[index]
-		actualFrame := image.NewRGBA(image.Rect(0, 0, 480, 270))
-		copy(actualFrame.Pix, buffer)
-
 		for xIndex := 0; xIndex < expectedFrame.Bounds().Dx(); xIndex += 1 {
 			for yIndex := 0; yIndex < expectedFrame.Bounds().Dy(); yIndex += 1 {
 				eR, eG, eB, eA := expectedFrame.At(xIndex, yIndex).RGBA()

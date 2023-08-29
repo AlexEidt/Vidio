@@ -151,7 +151,7 @@ func NewVideoWriter(filename string, width, height int, options *Options) (*Vide
 
 	if options.StreamFile != "" {
 		if !exists(options.StreamFile) {
-			return nil, fmt.Errorf("file %s does not exist", options.StreamFile)
+			return nil, fmt.Errorf("vidio: file %s does not exist", options.StreamFile)
 		}
 		writer.streamfile = options.StreamFile
 	}

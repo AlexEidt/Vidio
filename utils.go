@@ -31,7 +31,7 @@ func installed(program string) error {
 	cmd := exec.Command(program, "-version")
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("%s is not installed", program)
+		return fmt.Errorf("vidio: %s is not installed", program)
 	}
 
 	return nil
@@ -115,7 +115,7 @@ func webcam() (string, error) {
 	case "windows":
 		return "dshow", nil // vfwcap
 	default:
-		return "", fmt.Errorf("unsupported OS: %s", runtime.GOOS)
+		return "", fmt.Errorf("vidio: unsupported OS: %s", runtime.GOOS)
 	}
 }
 

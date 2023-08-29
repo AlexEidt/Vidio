@@ -59,7 +59,7 @@ func (camera *Camera) FrameBuffer() []byte {
 func (camera *Camera) SetFrameBuffer(buffer []byte) error {
 	size := camera.width * camera.height * camera.depth
 	if len(buffer) < size {
-		return fmt.Errorf("buffer size %d is smaller than frame size %d", len(buffer), size)
+		return fmt.Errorf("vidio: buffer size %d is smaller than frame size %d", len(buffer), size)
 	}
 	camera.framebuffer = buffer
 	return nil
@@ -86,11 +86,11 @@ func NewCamera(stream int) (*Camera, error) {
 			return nil, err
 		}
 		if stream < 0 || stream >= len(devices) {
-			return nil, fmt.Errorf("could not find device with index: %d", stream)
+			return nil, fmt.Errorf("vidio: could not find device with index: %d", stream)
 		}
 		device = fmt.Sprintf("video=%s", devices[stream])
 	default:
-		return nil, fmt.Errorf("unsupported OS: %s", runtime.GOOS)
+		return nil, fmt.Errorf("vidio: unsupported OS: %s", runtime.GOOS)
 	}
 
 	camera := &Camera{name: device, depth: 4}

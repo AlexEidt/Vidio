@@ -1,23 +1,22 @@
 package vidio
 
 import (
-	"fmt"
 	"image"
 	"image/png"
 	"os"
 	"testing"
 )
 
-func assertEquals(actual, expected interface{}) {
+func assertEquals(t *testing.T, actual, expected interface{}) {
 	if expected != actual {
-		panic(fmt.Sprintf("Expected %v, got %v", expected, actual))
+		t.Errorf("Expected %v, got %v", expected, actual)
 	}
 }
 
 func TestSetBuffer(t *testing.T) {
 	video, err := NewVideo("test/koala.mp4")
 	if err != nil {
-		panic(err)
+		t.Errorf("Failed to create the video: %s", err)
 	}
 	defer video.Close()
 
@@ -26,75 +25,69 @@ func TestSetBuffer(t *testing.T) {
 
 	video.Read()
 
-	assertEquals(len(video.framebuffer), size)
-
-	fmt.Println("Set Buffer Test Passed")
+	assertEquals(t, len(video.framebuffer), size)
 }
 
 func TestVideoMetaData(t *testing.T) {
 	video, err := NewVideo("test/koala.mp4")
 	if err != nil {
-		panic(err)
+		t.Errorf("Failed to create the video: %s", err)
 	}
 	defer video.Close()
 
-	assertEquals(video.filename, "test/koala.mp4")
-	assertEquals(video.width, 480)
-	assertEquals(video.height, 270)
-	assertEquals(video.depth, 4)
-	assertEquals(video.bitrate, 170549)
-	assertEquals(video.frames, 101)
-	assertEquals(video.duration, 3.366667)
-	assertEquals(video.fps, float64(30))
-	assertEquals(video.codec, "h264")
-	assertEquals(video.stream, 0)
-	assertEquals(video.hasstreams, true)
-	assertEquals(len(video.framebuffer), 0)
+	assertEquals(t, video.filename, "test/koala.mp4")
+	assertEquals(t, video.width, 480)
+	assertEquals(t, video.height, 270)
+	assertEquals(t, video.depth, 4)
+	assertEquals(t, video.bitrate, 170549)
+	assertEquals(t, video.frames, 101)
+	assertEquals(t, video.duration, 3.366667)
+	assertEquals(t, video.fps, float64(30))
+	assertEquals(t, video.codec, "h264")
+	assertEquals(t, video.stream, 0)
+	assertEquals(t, video.hasstreams, true)
+	assertEquals(t, len(video.framebuffer), 0)
 
 	if video.pipe != nil {
-		panic("Expected video.pipe to be nil")
+		t.Errorf("Expected video.pipe to be nil")
 	}
 	if video.cmd != nil {
-		panic("Expected video.cmd to be nil")
+		t.Errorf("Expected video.cmd to be nil")
 	}
-
-	fmt.Println("Video Meta Data Test Passed")
 }
 
 func TestVideoFrame(t *testing.T) {
 	video, err := NewVideo("test/koala.mp4")
 	if err != nil {
-		panic(err)
+		t.Errorf("Failed to create the video: %s", err)
 	}
 	defer video.Close()
 
 	video.Read()
 	// [203 222 134 255 203 222 134 255 203 222 134 255 203]
-	assertEquals(video.framebuffer[0], uint8(203))
-	assertEquals(video.framebuffer[1], uint8(222))
-	assertEquals(video.framebuffer[2], uint8(134))
-	assertEquals(video.framebuffer[3], uint8(255))
+	assertEquals(t, video.framebuffer[0], uint8(203))
+	assertEquals(t, video.framebuffer[1], uint8(222))
+	assertEquals(t, video.framebuffer[2], uint8(134))
+	assertEquals(t, video.framebuffer[3], uint8(255))
 
-	assertEquals(video.framebuffer[4], uint8(203))
-	assertEquals(video.framebuffer[5], uint8(222))
-	assertEquals(video.framebuffer[6], uint8(134))
-	assertEquals(video.framebuffer[7], uint8(255))
+	assertEquals(t, video.framebuffer[4], uint8(203))
+	assertEquals(t, video.framebuffer[5], uint8(222))
+	assertEquals(t, video.framebuffer[6], uint8(134))
+	assertEquals(t, video.framebuffer[7], uint8(255))
 
-	assertEquals(video.framebuffer[8], uint8(203))
-	assertEquals(video.framebuffer[9], uint8(222))
-	assertEquals(video.framebuffer[10], uint8(134))
-	assertEquals(video.framebuffer[11], uint8(255))
+	assertEquals(t, video.framebuffer[8], uint8(203))
+	assertEquals(t, video.framebuffer[9], uint8(222))
+	assertEquals(t, video.framebuffer[10], uint8(134))
+	assertEquals(t, video.framebuffer[11], uint8(255))
 
-	assertEquals(video.framebuffer[12], uint8(203))
-
-	fmt.Println("Video Frame Test Passed")
+	assertEquals(t, video.framebuffer[12], uint8(203))
 }
 
 func TestVideoWriting(t *testing.T) {
 	testWriting := func(input, output string) {
 		video, err := NewVideo(input)
 		if err != nil {
-			panic(err)
+			t.Errorf("Failed to create the video: %s", err)
 		}
 		options := Options{
 			FPS:     video.FPS(),
@@ -107,7 +100,7 @@ func TestVideoWriting(t *testing.T) {
 
 		writer, err := NewVideoWriter(output, video.width, video.height, &options)
 		if err != nil {
-			panic(err)
+			t.Errorf("Failed to create the video writer: %s", err)
 		}
 
 		for video.Read() {
@@ -120,22 +113,20 @@ func TestVideoWriting(t *testing.T) {
 	}
 
 	testWriting("test/koala.mp4", "test/koala-out.mp4")
-	fmt.Println("Video Writing (with Audio) Test Passed")
 	testWriting("test/koala-noaudio.mp4", "test/koala-noaudio-out.mp4")
-	fmt.Println("Video Writing (without Audio) Test Passed")
 }
 
 func TestCameraIO(t *testing.T) {
 	webcam, err := NewCamera(0)
 	if err != nil {
-		panic(err)
+		t.Errorf("Failed to create the camera: %s", err)
 	}
 
 	options := Options{FPS: webcam.FPS()}
 
 	writer, err := NewVideoWriter("test/camera.mp4", webcam.width, webcam.height, &options)
 	if err != nil {
-		panic(err)
+		t.Errorf("Failed to create the video writer: %s", err)
 	}
 
 	count := 0
@@ -143,7 +134,7 @@ func TestCameraIO(t *testing.T) {
 		frame := webcam.FrameBuffer()
 		err := writer.Write(frame)
 		if err != nil {
-			panic(err)
+			t.Errorf("Failed to write webcam image: %s", err)
 		}
 		count++
 		if count > 100 {
@@ -155,41 +146,38 @@ func TestCameraIO(t *testing.T) {
 	writer.Close()
 
 	os.Remove("test/camera.mp4")
-	fmt.Println("Camera IO Test Passed")
 }
 
 func TestFFprobe(t *testing.T) {
 	koalaVideo, err := ffprobe("test/koala.mp4", "v")
 	if err != nil {
-		panic(err)
+		t.Errorf("FFprobe failed: %s", err)
 	}
-	assertEquals(koalaVideo[0]["width"], "480")
-	assertEquals(koalaVideo[0]["height"], "270")
-	assertEquals(koalaVideo[0]["duration"], "3.366667")
-	assertEquals(koalaVideo[0]["bit_rate"], "170549")
-	assertEquals(koalaVideo[0]["codec_name"], "h264")
+	assertEquals(t, koalaVideo[0]["width"], "480")
+	assertEquals(t, koalaVideo[0]["height"], "270")
+	assertEquals(t, koalaVideo[0]["duration"], "3.366667")
+	assertEquals(t, koalaVideo[0]["bit_rate"], "170549")
+	assertEquals(t, koalaVideo[0]["codec_name"], "h264")
 	koalaAudio, err := ffprobe("test/koala.mp4", "a")
 	if err != nil {
-		panic(err)
+		t.Errorf("FFprobe failed: %s", err)
 	}
-	assertEquals(koalaAudio[0]["codec_name"], "aac")
+	assertEquals(t, koalaAudio[0]["codec_name"], "aac")
 
 	koalaVideo, err = ffprobe("test/koala-noaudio.mp4", "v")
 	if err != nil {
-		panic(err)
+		t.Errorf("FFprobe failed: %s", err)
 	}
-	assertEquals(koalaVideo[0]["width"], "480")
-	assertEquals(koalaVideo[0]["height"], "270")
-	assertEquals(koalaVideo[0]["duration"], "3.366667")
-	assertEquals(koalaVideo[0]["bit_rate"], "170549")
-	assertEquals(koalaVideo[0]["codec_name"], "h264")
+	assertEquals(t, koalaVideo[0]["width"], "480")
+	assertEquals(t, koalaVideo[0]["height"], "270")
+	assertEquals(t, koalaVideo[0]["duration"], "3.366667")
+	assertEquals(t, koalaVideo[0]["bit_rate"], "170549")
+	assertEquals(t, koalaVideo[0]["codec_name"], "h264")
 	koalaAudio, err = ffprobe("test/koala-noaudio.mp4", "a")
 	if err != nil {
-		panic(err)
+		t.Errorf("FFprobe failed: %s", err)
 	}
-	assertEquals(len(koalaAudio), 0)
-
-	fmt.Println("FFprobe Test Passed")
+	assertEquals(t, len(koalaAudio), 0)
 }
 
 // Linux and MacOS allow the user to directly choose a camera stream by index.
@@ -214,76 +202,64 @@ func TestDeviceParsingWindows(t *testing.T) {
 dummy: Immediate exit requested`,
 	)
 
-	assertEquals(data[0], "Integrated Camera")
-	assertEquals(data[1], "screen-capture-recorder")
-
-	fmt.Println("Device Parsing for Windows Test Passed")
+	assertEquals(t, data[0], "Integrated Camera")
+	assertEquals(t, data[1], "screen-capture-recorder")
 }
 
 func TestWebcamParsing(t *testing.T) {
 	camera := &Camera{}
-	err := camera.getCameraData(
+	camera.parseWebcamData(
 		`Input #0, dshow, from 'video=Integrated Camera':
   Duration: N/A, start: 1367309.442000, bitrate: N/A
   Stream #0:0: Video: mjpeg (Baseline) (MJPG / 0x47504A4D), yuvj422p(pc, bt470bg/unknown/unknown), 1280x720, 30 fps, 30 tbr, 10000k tbn
 At least one output file must be specified`,
 	)
 
-	if err != nil {
-		panic(err)
-	}
-
-	assertEquals(camera.width, 1280)
-	assertEquals(camera.height, 720)
-	assertEquals(camera.fps, float64(30))
-	assertEquals(camera.codec, "mjpeg")
-
-	fmt.Println("Webcam Parsing Test Passed")
+	assertEquals(t, camera.width, 1280)
+	assertEquals(t, camera.height, 720)
+	assertEquals(t, camera.fps, float64(30))
+	assertEquals(t, camera.codec, "mjpeg")
 }
 
 func TestImageRead(t *testing.T) {
 	w, h, img, err := Read("test/bananas.jpg")
 	if err != nil {
-		panic(err)
+		t.Errorf("Failed to read image: %s", err)
 	}
 
-	assertEquals(w, 200)
-	assertEquals(h, 133)
-	assertEquals(len(img), 200*133*4)
+	assertEquals(t, w, 200)
+	assertEquals(t, h, 133)
+	assertEquals(t, len(img), 200*133*4)
 	// [255 221 189 255 255 221 189 255 255 222 186 255 255]
-	assertEquals(img[0], uint8(255))
-	assertEquals(img[1], uint8(221))
-	assertEquals(img[2], uint8(189))
-	assertEquals(img[3], uint8(255))
+	assertEquals(t, img[0], uint8(255))
+	assertEquals(t, img[1], uint8(221))
+	assertEquals(t, img[2], uint8(189))
+	assertEquals(t, img[3], uint8(255))
 
-	assertEquals(img[4], uint8(255))
-	assertEquals(img[5], uint8(221))
-	assertEquals(img[6], uint8(189))
-	assertEquals(img[7], uint8(255))
+	assertEquals(t, img[4], uint8(255))
+	assertEquals(t, img[5], uint8(221))
+	assertEquals(t, img[6], uint8(189))
+	assertEquals(t, img[7], uint8(255))
 
-	assertEquals(img[8], uint8(255))
-	assertEquals(img[9], uint8(222))
-	assertEquals(img[10], uint8(186))
-	assertEquals(img[11], uint8(255))
+	assertEquals(t, img[8], uint8(255))
+	assertEquals(t, img[9], uint8(222))
+	assertEquals(t, img[10], uint8(186))
+	assertEquals(t, img[11], uint8(255))
 
-	assertEquals(img[12], uint8(255))
-
-	fmt.Println("Image Reading Test Passed")
+	assertEquals(t, img[12], uint8(255))
 }
 
 func TestImageWrite(t *testing.T) {
 	w, h, img, err := Read("test/bananas.jpg")
 	if err != nil {
-		panic(err)
+		t.Errorf("Failed to read image: %s", err)
 	}
 	err = Write("test/bananas-out.png", w, h, img)
 	if err != nil {
-		panic(err)
+		t.Errorf("Failed to write image: %s", err)
 	}
 
 	os.Remove("test/bananas-out.png")
-
-	fmt.Println("Image Writing Test Passed")
 }
 
 func TestReadFrameShouldReturnErrorOnOutOfRangeFrame(t *testing.T) {

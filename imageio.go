@@ -29,7 +29,7 @@ func Read(filename string, buffer ...[]byte) (int, int, []byte, error) {
 	var data []byte
 	if len(buffer) > 0 {
 		if len(buffer[0]) < size {
-			return 0, 0, nil, fmt.Errorf("buffer size (%d) is smaller than image size (%d)", len(buffer[0]), size)
+			return 0, 0, nil, fmt.Errorf("vidio: buffer size (%d) is smaller than image size (%d)", len(buffer[0]), size)
 		}
 		data = buffer[0]
 	} else {
@@ -68,6 +68,6 @@ func Write(filename string, width, height int, buffer []byte) error {
 	case ".jpg", ".jpeg":
 		return jpeg.Encode(f, image, nil)
 	default:
-		return fmt.Errorf("unsupported file extension: %s", filepath.Ext(filename))
+		return fmt.Errorf("vidio: unsupported file extension: %s", filepath.Ext(filename))
 	}
 }

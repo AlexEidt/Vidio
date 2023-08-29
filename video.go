@@ -92,7 +92,7 @@ func (video *Video) MetaData() map[string]string {
 func (video *Video) SetFrameBuffer(buffer []byte) error {
 	size := video.width * video.height * video.depth
 	if len(buffer) < size {
-		return fmt.Errorf("buffer size %d is smaller than frame size %d", len(buffer), size)
+		return fmt.Errorf("vidio: buffer size %d is smaller than frame size %d", len(buffer), size)
 	}
 	video.framebuffer = buffer
 	return nil
@@ -110,7 +110,7 @@ func NewVideo(filename string) (*Video, error) {
 // Read all video streams from the given file.
 func NewVideoStreams(filename string) ([]*Video, error) {
 	if !exists(filename) {
-		return nil, fmt.Errorf("video file %s does not exist", filename)
+		return nil, fmt.Errorf("vidio: video file %s does not exist", filename)
 	}
 	// Check if ffmpeg and ffprobe are installed on the users machine.
 	if err := installed("ffmpeg"); err != nil {
@@ -126,7 +126,7 @@ func NewVideoStreams(filename string) ([]*Video, error) {
 	}
 
 	if len(videoData) == 0 {
-		return nil, fmt.Errorf("no video data found in %s", filename)
+		return nil, fmt.Errorf("vidio: no video data found in %s", filename)
 	}
 
 	// Loop over all stream types. a: Audio, s: Subtitle, d: Data, t: Attachments

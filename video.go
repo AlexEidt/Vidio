@@ -168,6 +168,9 @@ func (video *Video) addVideoData(data map[string]string) {
 	if height, ok := data["height"]; ok {
 		video.height = int(parse(height))
 	}
+	if rotation, ok := data["tag:rotate"]; ok && (rotation == "90" || rotation == "270") {
+		video.width, video.height = video.height, video.width
+	}
 	if duration, ok := data["duration"]; ok {
 		video.duration = float64(parse(duration))
 	}

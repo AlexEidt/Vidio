@@ -27,6 +27,9 @@ type Video struct {
 	metadata    map[string]string // Video metadata.
 	pipe        io.ReadCloser     // Stdout pipe for ffmpeg process.
 	cmd         *exec.Cmd         // ffmpeg command.
+
+	closeCleanupChan chan struct{} // exit from cleanup goroutine to avoid chan and goroutine leak
+	cleanupClosed bool
 }
 
 func (video *Video) FileName() string {
@@ -150,6 +153,8 @@ func NewVideoStreams(filename string) ([]*Video, error) {
 			stream:     i,
 			hasstreams: hasstream,
 			metadata:   data,
+
+			closeCleanupChan: make(chan struct{}, 1),
 		}
 
 		video.addVideoData(data)
@@ -384,6 +389,11 @@ func (video *Video) ReadFrames(n ...int) ([]*image.RGBA, error) {
 
 // Closes the pipe and stops the ffmpeg process.
 func (video *Video) Close() {
+	if !video.cleanupClosed {
+		video.cleanupClosed = true
+		video.closeCleanupChan <- struct{}{}
+		close(video.closeCleanupChan)
+	}
 	if video.pipe != nil {
 		video.pipe.Close()
 	}
@@ -398,13 +408,18 @@ func (video *Video) cleanup() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
-		<-c
-		if video.pipe != nil {
-			video.pipe.Close()
+		select {
+		case <-c:
+			if video.pipe != nil {
+				video.pipe.Close()
+			}
+			if video.cmd != nil {
+				video.cmd.Process.Kill()
+			}
+			os.Exit(1)
+		case <-video.closeCleanupChan:
+			signal.Stop(c)
+			close(c)
 		}
-		if video.cmd != nil {
-			video.cmd.Process.Kill()
-		}
-		os.Exit(1)
 	}()
 }

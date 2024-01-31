@@ -29,7 +29,7 @@ type Video struct {
 	cmd         *exec.Cmd         // ffmpeg command.
 
 	closeCleanupChan chan struct{} // exit from cleanup goroutine to avoid chan and goroutine leak
-	cleanupClosed bool
+	cleanupClosed    bool
 }
 
 func (video *Video) FileName() string {
@@ -110,9 +110,15 @@ func NewVideo(filename string) (*Video, error) {
 	return streams[0], err
 }
 
+func isStream(url string) bool {
+	return strings.HasPrefix(url, "http://") ||
+		strings.HasPrefix(url, "https://") ||
+		strings.HasPrefix(url, "rtsp://")
+}
+
 // Read all video streams from the given file.
 func NewVideoStreams(filename string) ([]*Video, error) {
-	if !exists(filename) {
+	if !isStream(filename) && !exists(filename) {
 		return nil, fmt.Errorf("vidio: video file %s does not exist", filename)
 	}
 	// Check if ffmpeg and ffprobe are installed on the users machine.

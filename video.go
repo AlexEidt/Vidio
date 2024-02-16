@@ -210,6 +210,7 @@ func (video *Video) init() error {
 	// ffmpeg command to pipe video data to stdout in 8-bit RGBA format.
 	cmd := exec.Command(
 		"ffmpeg",
+		"-rtsp_transport", "tcp",
 		"-i", video.filename,
 		"-f", "image2pipe",
 		"-loglevel", "quiet",

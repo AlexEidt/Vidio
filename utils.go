@@ -43,6 +43,7 @@ func ffprobe(filename, stype string) ([]map[string]string, error) {
 	// Extract video information with ffprobe.
 	cmd := exec.Command(
 		"ffprobe",
+		"-rtsp_transport", "tcp",
 		"-show_streams",
 		"-select_streams", stype,
 		"-print_format", "compact",
